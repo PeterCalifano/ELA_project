@@ -17,4 +17,25 @@ tic
 [R_aq, R_qa] = CrossCorrEst(ax_zm, q_zm, Nsamples);
 toc
 
+%% Signal split and windowing (overlapped)
+% Divide signal into K parts of length M from zero mean signals
+
+
+% Create window functions and applied to each kth part
+
+
+%% DFT of signals
+% Apply DFT to each kth part
+
+
+%% PSD rough estimate
+% Apply rough estimator to each kth segment --> Power * 2/T;
+
+%% PSD smooth estimate
+% Apply either smooth estimate (mean of each rough estimate) or smooth-iterative
+% procedure (see slide 27 of PracticeClass7)
+
+
+%% FRF estimation
+
 
