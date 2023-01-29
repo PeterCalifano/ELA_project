@@ -1,6 +1,6 @@
-function [R_xx, signal_zm, signal_mean] = AutoCorrEst(signal, Nsamples)
+function [R_xy, R_yx] = CrossCorrEst(signalzm1, signalzm2, Nsamples)
 %% PROTOTYPE
-% [R_xx, signal_zm] = AutoCorrEst(signal, Nsamples);
+% [R_xy, R_yx] = CrossCorrEst(signalzm1, signalzm2, Nsamples)
 % -------------------------------------------------------------------------------------------------------------
 %% DESCRIPTION
 % What the function does
@@ -20,22 +20,18 @@ function [R_xx, signal_zm, signal_mean] = AutoCorrEst(signal, Nsamples)
 
 
 %% Function code
-x = signal;
-R_xx = zeros(Nsamples, 1);
+x = signalzm1;
+y = signalzm2;
 
-% Evaluate mean
-signal_mean = mean(x);
-% Remove mean
-x = x - signal_mean;
-% Assign zero mean value as output
-signal_zm = x;
+R_xy = zeros(Nsamples, 1);
+R_yx = zeros(Nsamples, 1);
 
-% Estimate R_xx
+% Estimate R_xy
 for nt = 1:Nsamples-1
     for n = 1:Nsamples - nt
-        R_xx(nt) = R_xx(nt) + (x(n)*x(n + nt))/(Nsamples-nt);
+        R_xy(nt) = R_xy(nt) + (x(n)*y(n + nt))/(Nsamples-nt);
+        R_yx(nt) = R_yx(nt) + (y(n)*x(n + nt))/(Nsamples-nt);
     end
 end
-
 
 end
