@@ -27,11 +27,11 @@ R_xy = zeros(Nsamples, 1);
 R_yx = zeros(Nsamples, 1);
 
 % Estimate R_xy
-for nt = 1:Nsamples-1
-    for n = 1:Nsamples - nt
-        R_xy(nt) = R_xy(nt) + (x(n)*y(n + nt))/(Nsamples-nt);
-        R_yx(nt) = R_yx(nt) + (y(n)*x(n + nt))/(Nsamples-nt);
-    end
-end
+% for nt = 1:Nsamples-1
+%     for n = 1:Nsamples - nt
+%         R_xy(nt) = R_xy(nt) + (x(n)*y(n + nt))/(Nsamples-nt);
+%         R_yx(nt) = R_yx(nt) + (y(n)*x(n + nt))/(Nsamples-nt);
+%     end
+% end
 
 end
