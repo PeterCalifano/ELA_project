@@ -18,6 +18,10 @@ tic
 toc
 
 %% Signal split and windowing (overlapped)
+% Reminder: trade-off to do with K number of intervals and M number of
+% samples per interval --> bias vs variance of the estimate depending on
+% the frequency bands of interest (control/determination?)
+
 % Divide signal into K parts of length M from zero mean signals
 x_frac = 0.5;
 K = 111;

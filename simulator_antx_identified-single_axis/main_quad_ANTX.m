@@ -93,9 +93,14 @@ simulation_time = t(end) - t(1);
 
 %% Launch SIMULATOR
 model_name = 'Simulator_Single_Axis';
-% , 'ShowSimulationManager', 'on'
-output = sim(model_name, 'TimeOut', simulation_time);
 
+% Simulate or load sample output
+if ~exist('simout.mat', 'file')
+    output = sim(model_name, 'TimeOut', simulation_time);
+    save('simout.mat', "output");
+else
+    load('simout.mat');
+end
 
 %% Delete temporary files
 
@@ -103,7 +108,7 @@ if exist('slprj','dir')
     rmdir('slprj', 's')                                                    
 end
 
-
+%%
 
 % Remove delay from input (last 4) and output (first 4)
 Excit_signal = output.Excit_signal(1:end-4);
@@ -133,7 +138,9 @@ grid minor;
 
 close all
 
-FRF_estimation
+% Call script to estimate Frequency Response Function from output time signals
+% output_delay = 0.016; % [s]
+FRF_estimation;
 
 
 
