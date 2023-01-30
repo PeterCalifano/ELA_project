@@ -19,7 +19,20 @@ toc
 
 %% Signal split and windowing (overlapped)
 % Divide signal into K parts of length M from zero mean signals
+x_frac = 0.5;
+K = 111;
 
+% Window length
+T_win = time_grid/((K-1)*(1-x_frac)+1);
+
+% Number of samples in each window
+N_win = round(N/((K-1)*(1-x_frac)+1));
+
+% Subdivision od data into K records of individual lenght T_win
+
+x_int = cell(1,K);
+return
+y_int
 
 % Create window functions and applied to each kth part
 
