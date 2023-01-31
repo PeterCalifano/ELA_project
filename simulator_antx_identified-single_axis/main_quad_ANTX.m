@@ -104,9 +104,9 @@ end
 
 %% Delete temporary files
 
-if exist('slprj','dir')
-    rmdir('slprj', 's')                                                    
-end
+% if exist('slprj','dir')
+%     rmdir('slprj', 's')                                                    
+% end
 
 %%
 

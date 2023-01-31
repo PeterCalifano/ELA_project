@@ -130,8 +130,10 @@ G_da_mat = cell2mat(G_da_rough);
 G_da = mean(G_da_mat,2);
 
 G_dq_mat = cell2mat(G_dq_rough);
-G_dq = mean(G_dq_mat,2);
+G_dq = mean(G_dq_mat, 2);
+
 %%
+
 close all
 figure
 loglog(f,abs(G_dd))
@@ -155,8 +157,85 @@ loglog(f,abs(G_dq))
 grid minor
 
 
-
-
 %% FRF estimation
+H1 = G_dq./G_dd;
+H2 = G_da./G_dd;
+
+H1real = real(H1);
+H1imag = imag(H1);
+
+H2real = real(H2);
+H2imag = imag(H2);
+
+% "Measurements" vector
+yH = [H1real; H1imag; H2real; H2imag];
+ 
+
+% Determine TF model class
+% First alternative: by looking at state space form of the system
+% Parameters in theta: Xu Xq Mu Mq Xd Md 
+% syms th [6 1]
+% syms s % TF variable
+
+% A = [Xu Xq -9.81; Mu Mq 0; 0 1 0];
+% B = [Xd; Md; 0];
+% C = [0 1 0; Xu Xq 0];
+% D = [0;Xd];
+
+% A = [th(1) th(2) -9.81; th(3), th(4) 0; 0 1 0];
+% B = [th(5); th(6); 0];
+% C = [0, 1, 0; th(1), th(2), 0];
+% D = [0; th(5)];
+% 
+% Phi = (s*eye(3) - A)^(-1);
+% H = C*Phi*B+D;
+% 
+% % Display matrix
+% pretty(H);
+
+th = [1 0 2 0 3 4];
+% Test function Hmodel
+fcn = Hmodel(th);
+
+% Determine frequency response of H1 over grid f
+% CHECK INUT TO FREQRESP (f or w?)
+H1_sim = freqresp(fcn, f);
+% Determine frequency response of H2 over grid f
+H2_sim = freqresp(fcn, f);
+
+H1sim_re = real(H1_sim);
+H1sim_im = imag(H1_sim);
+
+H2sim_re = real(H2_sim);
+H2sim_im = imag(H2_sim);
+
+% "Measurements" vector
+yH_sim = [H1sim_re; H1sim_im; H2sim_re; H2sim_im];
+
+Nf = length(f);
+% Assume noise variance matrix (identity for now)
+R = eye(4*length(f));
+e = yH - yH_sim;
+
+% Evaluate cost function
+% J = 1/2 * sum(e'* (R^-1) * e);
+J = 0.5 * sum(e' * R^-1 * e);
+
+% Optimization procedure to get optimal theta parameters
+% Newton-Raphson 
+
+
+%% Function
+function fcn = Hmodel(th)
+
+s = tf('s');
+den = 981*th(3) - 100*s*th(1) - 100*s *th(4) + 100*s  + 100*s*th(1)*th(4) - 100*s*th(2)* th(3);
+fcn = (100*s*th(3)*th(5))/den + 100*s*th(6)*(s - th(1))/den;
+
+% |           / th1 (100 s th2 - 981)   100 s th2 (s - th1) \       / 100 s th2 th3   100 s th1 (s - th4) \ |
+% | th5 + th6 | --------------------- + ------------------- | + th5 | ------------- + ------------------- | |
+% \           \           #1                     #1         /       \       #1                 #1         / /
+
+end
 
 
