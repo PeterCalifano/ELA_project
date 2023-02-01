@@ -170,18 +170,19 @@ H2imag = imag(H2);
 % "Measurements" vector
 yH = [H1real; H1imag; H2real; H2imag];
  
+close all
 
 % Determine TF model class
 % First alternative: by looking at state space form of the system
 % Parameters in theta: Xu Xq Mu Mq Xd Md 
-% syms th [6 1]
+% syms th [6, 1]
 % syms s % TF variable
-
-% A = [Xu Xq -9.81; Mu Mq 0; 0 1 0];
-% B = [Xd; Md; 0];
-% C = [0 1 0; Xu Xq 0];
-% D = [0;Xd];
-
+% 
+% % A = [Xu Xq -9.81; Mu Mq 0; 0 1 0];
+% % B = [Xd; Md; 0];
+% % C = [0 1 0; Xu Xq 0];
+% % D = [0;Xd];
+% 
 % A = [th(1) th(2) -9.81; th(3), th(4) 0; 0 1 0];
 % B = [th(5); th(6); 0];
 % C = [0, 1, 0; th(1), th(2), 0];
@@ -193,15 +194,38 @@ yH = [H1real; H1imag; H2real; H2imag];
 % % Display matrix
 % pretty(H);
 
-th = [1 0 2 0 3 4];
-% Test function Hmodel
-fcn = Hmodel(th);
+th_true = [-0.1068, 0.1192, -5.9755,  -2.6478, -10.1647, 450.71];
 
+% Test function Hmodel
+fcn_true = minreal(Hmodelstruct(th_true));
+
+
+% %%%%%%%%%%%%%%%%%%%%%%%% DEBUG %%%%%%%%%%%%%%%%%%%%%%%%%
+% figure;
+% bode(G(1), f);
+% hold on
+% bode(fcn(1), f);
+% grid minor
+% legend;
+% 
+% figure;
+% bode(G(2), f);
+% hold on
+% bode(fcn(2), f);
+% grid minor
+% legend;
+%%%%%%%%%%%%%%%%%%%%%%%% DEBUG %%%%%%%%%%%%%%%%%%%%%%%%%
+
+% Convert to function (needed at each iteration starting from guess th0
+%%
 % Determine frequency response of H1 over grid f
-% CHECK INUT TO FREQRESP (f or w?)
-H1_sim = freqresp(fcn, f);
+fcn = minreal(Hmodelstruct(th_true));
+
+% CHECK INPUT TO FREQRESP (f or w?)
+H1_sim = squeeze(freqresp(fcn(1), f, 'Hz'));
+
 % Determine frequency response of H2 over grid f
-H2_sim = freqresp(fcn, f);
+H2_sim = squeeze(freqresp(fcn(2), f, 'Hz'));
 
 H1sim_re = real(H1_sim);
 H1sim_im = imag(H1_sim);
@@ -213,29 +237,83 @@ H2sim_im = imag(H2_sim);
 yH_sim = [H1sim_re; H1sim_im; H2sim_re; H2sim_im];
 
 Nf = length(f);
-% Assume noise variance matrix (identity for now)
-R = eye(4*length(f));
-e = yH - yH_sim;
 
-% Evaluate cost function
-% J = 1/2 * sum(e'* (R^-1) * e);
-J = 0.5 * sum(e' * R^-1 * e);
+% Assume noise variance matrix (identity for now)
+% 1st col: re(G1), 2nd col: im(G1), 3rd col: re(G2), 4th col: im(G2)
+e = reshape(yH - yH_sim, length(f), 4);
+
+J = 0;
+for id = 1:length(f)
+    R = eye(4);
+    % Evaluate cost function
+    % J = 1/2 * sum(e'* (R^-1) * e);
+    J = J + 0.5 * e(id, :) * R^-1 * e(id, :)';
+end
+
+dTFdth = ComputeGradient(yH_sim, f, th_true);
 
 % Optimization procedure to get optimal theta parameters
 % Newton-Raphson 
+% TO DO: 
+% 1) Write Transfer function as MATLAB function to evaluate given theta
+% parameters 
+% 2) Set up optimization procedure
+% 3) Test output
+
+FLAG_CONVERGENCE = 0;
+
+% iteration
+while ~FLAG_CONVERGENCE
+
+    % Compute gradient and hessian of J wrt theta
+%     s = computeFRFsensitivity(omega_vec, G_th, theta);
+
+
+    G = zeros(nth, 1);
+    H = zeros(nth, nth);
+
+    for kk=1:K
+        dydtheta = zeros(2, nth);
+        for ii = 1:nth
+            dydtheta(:, ii) = s(ii).dy(:, kk);
+        end
+        t = -e(:,kk)' * Rinv * dydtheta;
+        G = G + t';
+
+        H = H + dydtheta' * Rinv * dydtheta;
+    end
+
+    % compute step (Newton-Raphson)
+    delta_theta = -H\G;
+
+    theta_new = theta + delta_theta;
+
+    [J_new, e_new] = costFunction(g_m, omega_vec, G_th, theta_new);
+
+    % check convergence
+    if (norm(delta_theta) < TRESHOLD_THETA ...
+            || norm(J_new - J) < TRESHOLD_J ...
+            || c > Nmax)
+        FLAG_CONVERGENCE = true;
+    end
+
+    % update
+    theta = theta_new;
+    c = c+1;
+    J = J_new;
+    e = e_new;
+
+    % DEBUG
+    fprintf('Iteration #%d\t cost function value %f ',c,J);
+    for ii=1:nth
+        fprintf('\ttheta%d %f ', ii, theta(ii));
+    end
+    fprintf('\n');
+
+end
 
 
 %% Function
-function fcn = Hmodel(th)
 
-s = tf('s');
-den = 981*th(3) - 100*s*th(1) - 100*s *th(4) + 100*s  + 100*s*th(1)*th(4) - 100*s*th(2)* th(3);
-fcn = (100*s*th(3)*th(5))/den + 100*s*th(6)*(s - th(1))/den;
-
-% |           / th1 (100 s th2 - 981)   100 s th2 (s - th1) \       / 100 s th2 th3   100 s th1 (s - th4) \ |
-% | th5 + th6 | --------------------- + ------------------- | + th5 | ------------- + ------------------- | |
-% \           \           #1                     #1         /       \       #1                 #1         / /
-
-end
 
 
