@@ -133,29 +133,30 @@ G_dq_mat = cell2mat(G_dq_rough);
 G_dq = mean(G_dq_mat, 2);
 
 
-close all
 
-figure
-loglog(f_axis, abs(G_dd))
-grid minor
-
-figure
-loglog(f_axis, abs(G_aa))
-grid minor
-
-figure
-loglog(f_axis, abs(G_qq))
-grid minor
-
-figure
-loglog(f_axis, abs(G_da))
-grid minor
-
-figure
-loglog(f_axis, abs(G_dq))
-grid minor
-
-close all
+% close all
+% 
+% figure
+% loglog(f_axis, abs(G_dd))
+% grid minor
+% 
+% figure
+% loglog(f_axis, abs(G_aa))
+% grid minor
+% 
+% figure
+% loglog(f_axis, abs(G_qq))
+% grid minor
+% 
+% figure
+% loglog(f_axis, abs(G_da))
+% grid minor
+% 
+% figure
+% loglog(f_axis, abs(G_dq))
+% grid minor
+% 
+% close all
 
 
 %% FRF estimation
@@ -168,15 +169,6 @@ gamma2_da = EstimateCoherence(G_da, G_dd, G_aa, 2*pi*f_axis);
 
 yH = formatFRF([H1, H2]);
 
-% H1real = real(H1);
-% H1imag = imag(H1);
-% 
-% H2real = real(H2);
-% H2imag = imag(H2);
-
-% "Measurements" vector
-% yH = [[H1real; H1imag], [H2real; H2imag]];
- 
 % Determine TF model class
 % First alternative: by looking at state space form of the system
 % Parameters in theta: Xu Xq Mu Mq Xd Md 
@@ -225,22 +217,13 @@ TF = minreal(Hmodelstruct(th_true));
 yH_sim = evalFreqR(TF, f_axis, 'Hz');
 
 Nf = length(f_axis);
+Nfcn = size(TF, 1)*size(TF, 2) ;
 
-% Assume noise variance matrix (identity for now)
-% 1st col: re(G1), 2nd col: im(G1), 3rd col: re(G2), 4th col: im(G2)
-% eH = reshape(yH - yH_sim, length(f_axis), 4);
-
-% J = 0;
-% for id = 1:length(f_axis)
-%     R = eye(4);
-%     % Evaluate cost function
-%     % J = 1/2 * sum(e'* (R^-1) * e);
-%     J = J + 0.5 * eH(id, :) * R^-1 * eH(id, :)';
-% end
-
+% R = identity 8default in function=
 [J, eH] = J_LS(yH, yH_sim);
+eH = reshape(eH, Nf, 2*Nfcn);
 
-dTFdth = ComputeSensitivity(yH_sim, f_axis, th_true);
+dFRFdth = ComputeSensitivity(yH_sim, f_axis, th_true);
 
 % Optimization procedure to get optimal theta parameters
 % Newton-Raphson 
@@ -249,40 +232,54 @@ dTFdth = ComputeSensitivity(yH_sim, f_axis, th_true);
 % 2.2) Code function to execute Newton Raphson scheme
 % 3) Test output
 
-return
 
 FLAG_CONVERGENCE = 0;
+Nparams = length(th_true);
 
-% iteration
+% Iterative search cycle
+
 while ~FLAG_CONVERGENCE
 
-    % Compute gradient and hessian of J wrt theta
-%     s = computeFRFsensitivity(omega_vec, G_th, theta);
+    % FOR DEVELOPMENT --> STOP CYCLE AT 1
+    FLAG_CONVERGENCE = 1;
 
+    % Static allocation of Gradient vector and Hessian Matrix
+    GJ = zeros(Nparams, 1);
+    HJ = zeros(Nparams, Nparams);
 
-    G = zeros(nth, 1);
-    H = zeros(nth, nth);
+    % Rinv must have size equal to 2*Number of entries in the transfer
+    % function matrix
+    Rinv = eye(2*Nfcn);
 
-    for kk=1:K
-        dydtheta = zeros(2, nth);
-        for ii = 1:nth
-            dydtheta(:, ii) = s(ii).dy(:, kk);
+    % nth indexes the parameters
+    for ff = 1:Nf
+       dFRFdth_idp = zeros(4, Nparams);
+
+        for idp = 1:Nparams
+            dFRFdth_idp(:, idp) = dFRFdth{idp}(ff, :);
         end
-        t = -eH(:,kk)' * Rinv * dydtheta;
-        G = G + t';
+        
+        t = -eH(ff, :) * Rinv * dFRFdth_idp;
+        GJ = GJ + t';
 
-        H = H + dydtheta' * Rinv * dydtheta;
+        HJ = HJ + dFRFdth_idp' * Rinv * dFRFdth_idp;
     end
 
-    % compute step (Newton-Raphson)
-    delta_theta = -H\G;
+    % Evaluate dtheta to find new guess vector
+    diff_theta = -HJ\GJ;
+    % Compute new guess vector
+    theta_new = th_true' + diff_theta;
+    % Evaluate new Transfer Function
+    TF_new = minreal(Hmodelstruct(theta_new));
+    % Determine frequency response
+    yH_sim_new = evalFreqR(TF_new, f_axis, 'Hz');
 
-    theta_new = theta + delta_theta;
+    [J_new, e_new] = J_LS(yH, yH_sim_new);
 
-    [J_new, e_new] = costFunction(g_m, omega_vec, G_th, theta_new);
-
+    return
+    
     % check convergence
-    if (norm(delta_theta) < TRESHOLD_THETA ...
+    if (norm(diff_theta) < TRESHOLD_THETA ...
             || norm(J_new - J) < TRESHOLD_J ...
             || c > Nmax)
         FLAG_CONVERGENCE = true;

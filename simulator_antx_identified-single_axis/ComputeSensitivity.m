@@ -1,4 +1,4 @@
-function dTFdth = ComputeSensitivity(TFfreqresp, freq, params)
+function dFRFdth = ComputeSensitivity(TFfreqresp, freq, params)
 %% PROTOTYPE
 % -------------------------------------------------------------------------------------------------------------
 %% DESCRIPTION
@@ -22,7 +22,8 @@ function dTFdth = ComputeSensitivity(TFfreqresp, freq, params)
 % Determine size of the parameters vector
 Nparam = length(params);
 % Static allocation of output
-dTFdth = zeros(4*length(freq), Nparam);
+% dFRFdth = zeros(4*length(freq), Nparam);
+dFRFdth = cell(Nparam, 1);
 
 % For each parameter theta(idp), compute gradient and store it
 for idp = 1:Nparam
@@ -46,7 +47,7 @@ for idp = 1:Nparam
 %     yH_pert = [g1re, g1im, g2re, g2im]';
 
     yH_pert = evalFreqR(Hmodelstruct(theta), freq);
-    dTFdth(:, idp) = reshape((yH_pert - TFfreqresp)./dth, 4*length(freq), 1);
+    dFRFdth{idp} = reshape((yH_pert - TFfreqresp)./dth, length(freq), []);
 end
 
 end
