@@ -92,8 +92,8 @@ for k = 1:K
 
 end
 
-% frequency
-f = ((0:(Nsamples-1)/2)*1/sample_time/Nsamples)';
+% Frequency
+f_axis = ((0:(Nsamples-1)/2)*1/sample_time/Nsamples)';
 
 %% PSD rough estimate
 % Apply rough estimator to each kth segment --> Power * 2/T;
@@ -132,46 +132,51 @@ G_da = mean(G_da_mat,2);
 G_dq_mat = cell2mat(G_dq_rough);
 G_dq = mean(G_dq_mat, 2);
 
-%%
 
 close all
+
 figure
-loglog(f,abs(G_dd))
+loglog(f_axis, abs(G_dd))
 grid minor
 
 figure
-loglog(f,abs(G_aa))
+loglog(f_axis, abs(G_aa))
 grid minor
 
 figure
-loglog(f,abs(G_qq))
-grid minor
-
-
-figure
-loglog(f,abs(G_da))
+loglog(f_axis, abs(G_qq))
 grid minor
 
 figure
-loglog(f,abs(G_dq))
+loglog(f_axis, abs(G_da))
 grid minor
+
+figure
+loglog(f_axis, abs(G_dq))
+grid minor
+
+close all
 
 
 %% FRF estimation
 H1 = G_dq./G_dd;
 H2 = G_da./G_dd;
 
-H1real = real(H1);
-H1imag = imag(H1);
+% Test Coherence evaluation function
+gamma2_dq = EstimateCoherence(G_dq, G_dd, G_qq, 2*pi*f_axis);
+gamma2_da = EstimateCoherence(G_da, G_dd, G_aa, 2*pi*f_axis);
 
-H2real = real(H2);
-H2imag = imag(H2);
+yH = formatFRF([H1, H2]);
+
+% H1real = real(H1);
+% H1imag = imag(H1);
+% 
+% H2real = real(H2);
+% H2imag = imag(H2);
 
 % "Measurements" vector
-yH = [H1real; H1imag; H2real; H2imag];
+% yH = [[H1real; H1imag], [H2real; H2imag]];
  
-close all
-
 % Determine TF model class
 % First alternative: by looking at state space form of the system
 % Parameters in theta: Xu Xq Mu Mq Xd Md 
@@ -199,7 +204,6 @@ th_true = [-0.1068, 0.1192, -5.9755,  -2.6478, -10.1647, 450.71];
 % Test function Hmodel
 fcn_true = minreal(Hmodelstruct(th_true));
 
-
 % %%%%%%%%%%%%%%%%%%%%%%%% DEBUG %%%%%%%%%%%%%%%%%%%%%%%%%
 % figure;
 % bode(G(1), f);
@@ -216,49 +220,36 @@ fcn_true = minreal(Hmodelstruct(th_true));
 % legend;
 %%%%%%%%%%%%%%%%%%%%%%%% DEBUG %%%%%%%%%%%%%%%%%%%%%%%%%
 
-% Convert to function (needed at each iteration starting from guess th0
-%%
-% Determine frequency response of H1 over grid f
-fcn = minreal(Hmodelstruct(th_true));
+TF = minreal(Hmodelstruct(th_true));
+% Determine frequency responses of H over grid f
+yH_sim = evalFreqR(TF, f_axis, 'Hz');
 
-% CHECK INPUT TO FREQRESP (f or w?)
-H1_sim = squeeze(freqresp(fcn(1), f, 'Hz'));
-
-% Determine frequency response of H2 over grid f
-H2_sim = squeeze(freqresp(fcn(2), f, 'Hz'));
-
-H1sim_re = real(H1_sim);
-H1sim_im = imag(H1_sim);
-
-H2sim_re = real(H2_sim);
-H2sim_im = imag(H2_sim);
-
-% "Measurements" vector
-yH_sim = [H1sim_re; H1sim_im; H2sim_re; H2sim_im];
-
-Nf = length(f);
+Nf = length(f_axis);
 
 % Assume noise variance matrix (identity for now)
 % 1st col: re(G1), 2nd col: im(G1), 3rd col: re(G2), 4th col: im(G2)
-e = reshape(yH - yH_sim, length(f), 4);
+% eH = reshape(yH - yH_sim, length(f_axis), 4);
 
-J = 0;
-for id = 1:length(f)
-    R = eye(4);
-    % Evaluate cost function
-    % J = 1/2 * sum(e'* (R^-1) * e);
-    J = J + 0.5 * e(id, :) * R^-1 * e(id, :)';
-end
+% J = 0;
+% for id = 1:length(f_axis)
+%     R = eye(4);
+%     % Evaluate cost function
+%     % J = 1/2 * sum(e'* (R^-1) * e);
+%     J = J + 0.5 * eH(id, :) * R^-1 * eH(id, :)';
+% end
 
-dTFdth = ComputeGradient(yH_sim, f, th_true);
+[J, eH] = J_LS(yH, yH_sim);
+
+dTFdth = ComputeSensitivity(yH_sim, f_axis, th_true);
 
 % Optimization procedure to get optimal theta parameters
 % Newton-Raphson 
 % TO DO: 
-% 1) Write Transfer function as MATLAB function to evaluate given theta
-% parameters 
-% 2) Set up optimization procedure
+% 2.1) Verify Sensitivity Function
+% 2.2) Code function to execute Newton Raphson scheme
 % 3) Test output
+
+return
 
 FLAG_CONVERGENCE = 0;
 
@@ -277,7 +268,7 @@ while ~FLAG_CONVERGENCE
         for ii = 1:nth
             dydtheta(:, ii) = s(ii).dy(:, kk);
         end
-        t = -e(:,kk)' * Rinv * dydtheta;
+        t = -eH(:,kk)' * Rinv * dydtheta;
         G = G + t';
 
         H = H + dydtheta' * Rinv * dydtheta;
@@ -301,7 +292,7 @@ while ~FLAG_CONVERGENCE
     theta = theta_new;
     c = c+1;
     J = J_new;
-    e = e_new;
+    eH = e_new;
 
     % DEBUG
     fprintf('Iteration #%d\t cost function value %f ',c,J);

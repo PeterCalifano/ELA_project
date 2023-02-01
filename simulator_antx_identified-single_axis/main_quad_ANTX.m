@@ -14,9 +14,17 @@
 % clearvars;
 close all;
 clear;
-addpath('datasets','common','common/simulator-toolbox','common/simulator-toolbox/attitude_library','common/simulator-toolbox/trajectory_library');
 clc;
-clear 
+
+addpath('datasets','common','common/simulator-toolbox','common/simulator-toolbox/attitude_library','common/simulator-toolbox/trajectory_library');
+
+ 
+
+DefaultFontSize = 16;
+set(groot, 'defaultAxesTickLabelInterpreter', 'latex');
+set(groot, 'defaultLegendInterpreter', 'latex');
+set(groot, 'defaulttextinterpreter', 'latex');
+set(0, 'defaultAxesFontSize', DefaultFontSize)
 
 %% Model parameters
 
