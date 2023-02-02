@@ -193,6 +193,8 @@ yH = formatFRF([H1, H2]);
 
 th_true = [-0.1068, 0.1192, -5.9755,  -2.6478, -10.1647, 450.71];
 
+theta = th_true.*[1.2 1.85 0.8 1.5 0.7 1.3];
+
 % Test function Hmodel
 fcn_true = minreal(Hmodelstruct(th_true));
 
@@ -212,7 +214,7 @@ fcn_true = minreal(Hmodelstruct(th_true));
 % legend;
 %%%%%%%%%%%%%%%%%%%%%%%% DEBUG %%%%%%%%%%%%%%%%%%%%%%%%%
 
-TF = minreal(Hmodelstruct(th_true));
+TF = minreal(Hmodelstruct(theta));
 % Determine frequency responses of H over grid f
 yH_sim = evalFreqR(TF, f_axis, 'Hz');
 
@@ -223,7 +225,7 @@ Nfcn = size(TF, 1)*size(TF, 2) ;
 [J, eH] = J_LS(yH, yH_sim);
 eH = reshape(eH, Nf, 2*Nfcn);
 
-dFRFdth = ComputeSensitivity(yH_sim, f_axis, th_true);
+% dFRFdth = ComputeSensitivity(yH_sim, f_axis, th_true);
 
 % Optimization procedure to get optimal theta parameters
 % Newton-Raphson 
@@ -237,6 +239,10 @@ FLAG_CONVERGENCE = 0;
 Nparams = length(th_true);
 
 % Iterative search cycle
+c = 0;
+Nmax = 50;
+TRESHOLD_THETA = 1e-3;
+TRESHOLD_J = 1e-3;
 
 while ~FLAG_CONVERGENCE
 
@@ -254,7 +260,7 @@ while ~FLAG_CONVERGENCE
     % nth indexes the parameters
     for ff = 1:Nf
        dFRFdth_idp = zeros(4, Nparams);
-
+       dFRFdth = ComputeSensitivity(yH_sim, f_axis, theta);
         for idp = 1:Nparams
             dFRFdth_idp(:, idp) = dFRFdth{idp}(ff, :);
         end
@@ -268,7 +274,7 @@ while ~FLAG_CONVERGENCE
     % Evaluate dtheta to find new guess vector
     diff_theta = -HJ\GJ;
     % Compute new guess vector
-    theta_new = th_true' + diff_theta;
+    theta_new = theta' + diff_theta;
     % Evaluate new Transfer Function
     TF_new = minreal(Hmodelstruct(theta_new));
     % Determine frequency response
@@ -276,7 +282,7 @@ while ~FLAG_CONVERGENCE
 
     [J_new, e_new] = J_LS(yH, yH_sim_new);
 
-    return
+    
     
     % check convergence
     if (norm(diff_theta) < TRESHOLD_THETA ...
