@@ -21,6 +21,7 @@ function dFRFdth = ComputeSensitivity(TFfreqresp, freq, params)
 %% Function code
 % Determine size of the parameters vector
 Nparam = length(params);
+
 % Static allocation of output
 % dFRFdth = zeros(4*length(freq), Nparam);
 dFRFdth = cell(Nparam, 1);
@@ -29,7 +30,8 @@ dFRFdth = cell(Nparam, 1);
 for idp = 1:Nparam
     % Reference: MSAS lecture 03
     % Compute perturbation using machine precision value
-    dth = max(sqrt(eps), sqrt(eps)*abs(params(idp)));
+%     dth = max(sqrt(eps), sqrt(eps)*abs(params(idp)));
+    dth = 0.1*abs(params(idp));
     % Expand dth to vector
     th_perturbation = zeros(1, length(params));
     th_perturbation(idp) = dth;
@@ -46,7 +48,7 @@ for idp = 1:Nparam
     % "Measurements" vector
 %     yH_pert = [g1re, g1im, g2re, g2im]';
 
-    yH_pert = evalFreqR(Hmodelstruct(theta), freq);
+    yH_pert = evalFreqR(Hmodelstruct(theta), freq, 'Hz');
     dFRFdth{idp} = reshape((yH_pert - TFfreqresp)./dth, length(freq), []);
 end
 

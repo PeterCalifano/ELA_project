@@ -39,23 +39,30 @@ yq_int  = cell(1,K);
 xd_int  = cell(1,K);
 t_int   = cell(1,K);
 
+yax_int{1} = ax_zm(1:N_win);
+yax_int{K} = ax_zm(end-N_win:end);
+
+yq_int{1} = q_zm(1:N_win);
+yq_int{K} = q_zm(end-N_win:end);
+
+xd_int{1} = delta_zm(1:N_win);
+xd_int{K} = delta_zm(end-N_win:end);
+t_int{1} = time_grid(1:N_win);
+t_int{K} = time_grid(end-N_win:end);
+
 for k=2:K-1
-    yax_int{1} = ax_zm(1:N_win);
-    yax_int{k} = ax_zm((1-x_frac)*(k-1)*N_win:(1-x_frac)*(k-1)*N_win+N_win);
-    yax_int{K} = ax_zm(end-N_win:end);
 
-    yq_int{1} = q_zm(1:N_win);
-    yq_int{k} = q_zm((1-x_frac)*(k-1)*N_win:(1-x_frac)*(k-1)*N_win+N_win);
-    yq_int{K} = q_zm(end-N_win:end);
+    indexes = ceil((1-x_frac)*(k-1)*N_win:(1-x_frac)*(k-1)*N_win+N_win);
 
-    xd_int{1} = delta_zm(1:N_win);
-    xd_int{k} = delta_zm((1-x_frac)*(k-1)*N_win:(1-x_frac)*(k-1)*N_win+N_win);
-    xd_int{K} = delta_zm(end-N_win:end);
+    while indexes(end) > length(time_grid)
+        indexes(end) = [];
+    end
 
-    t_int{1} = time_grid(1:N_win);
-    t_int{k} = time_grid((1-x_frac)*(k-1)*N_win:(1-x_frac)*(k-1)*N_win+N_win);
-    t_int{K} = time_grid(end-N_win:end);
-    
+    yax_int{k} = ax_zm(indexes);
+    yq_int{k} = q_zm(indexes);
+    xd_int{k} = delta_zm(indexes);
+    t_int{k} = time_grid(indexes);
+
 end
 
 % Create window functions and applied to each kth part
@@ -193,10 +200,10 @@ yH = formatFRF([H1, H2]);
 
 th_true = [-0.1068, 0.1192, -5.9755,  -2.6478, -10.1647, 450.71];
 
-theta = th_true.*[1.2 1.85 0.8 1.5 0.7 1.3];
+theta0 = th_true.*[1.2 1.85 0.8 1.5 0.7 1.3];
 
 % Test function Hmodel
-fcn_true = minreal(Hmodelstruct(th_true));
+% fcn_true = minreal(Hmodelstruct(th_true));
 
 % %%%%%%%%%%%%%%%%%%%%%%%% DEBUG %%%%%%%%%%%%%%%%%%%%%%%%%
 % figure;
@@ -214,12 +221,12 @@ fcn_true = minreal(Hmodelstruct(th_true));
 % legend;
 %%%%%%%%%%%%%%%%%%%%%%%% DEBUG %%%%%%%%%%%%%%%%%%%%%%%%%
 
-TF = minreal(Hmodelstruct(theta));
+TF_new = minreal(Hmodelstruct(theta0));
 % Determine frequency responses of H over grid f
-yH_sim = evalFreqR(TF, f_axis, 'Hz');
+yH_sim = evalFreqR(TF_new, f_axis, 'Hz');
 
 Nf = length(f_axis);
-Nfcn = size(TF, 1)*size(TF, 2) ;
+Nfcn = size(TF_new, 1)*size(TF_new, 2);
 
 % R = identity 8default in function=
 [J, eH] = J_LS(yH, yH_sim);
@@ -240,14 +247,16 @@ Nparams = length(th_true);
 
 % Iterative search cycle
 c = 0;
-Nmax = 50;
+Nmax = 20;
 TRESHOLD_THETA = 1e-3;
 TRESHOLD_J = 1e-3;
+
+theta = theta0;
 
 while ~FLAG_CONVERGENCE
 
     % FOR DEVELOPMENT --> STOP CYCLE AT 1
-    FLAG_CONVERGENCE = 1;
+%     FLAG_CONVERGENCE = 1;
 
     % Static allocation of Gradient vector and Hessian Matrix
     GJ = zeros(Nparams, 1);
@@ -258,13 +267,16 @@ while ~FLAG_CONVERGENCE
     Rinv = eye(2*Nfcn);
 
     % nth indexes the parameters
+    
+    dFRFdth = ComputeSensitivity(yH_sim, f_axis, theta);
+
     for ff = 1:Nf
-       dFRFdth_idp = zeros(4, Nparams);
-       dFRFdth = ComputeSensitivity(yH_sim, f_axis, theta);
+        dFRFdth_idp = zeros(4, Nparams);
         for idp = 1:Nparams
             dFRFdth_idp(:, idp) = dFRFdth{idp}(ff, :);
         end
-        
+
+        % Gradient and Hessian are too large in value
         t = -eH(ff, :) * Rinv * dFRFdth_idp;
         GJ = GJ + t';
 
@@ -273,17 +285,21 @@ while ~FLAG_CONVERGENCE
 
     % Evaluate dtheta to find new guess vector
     diff_theta = -HJ\GJ;
+
+    if ~iscolumn(theta)
+        theta = theta';
+    end
+
     % Compute new guess vector
-    theta_new = theta' + diff_theta;
+    theta_new = theta + diff_theta;
     % Evaluate new Transfer Function
     TF_new = minreal(Hmodelstruct(theta_new));
     % Determine frequency response
     yH_sim_new = evalFreqR(TF_new, f_axis, 'Hz');
 
     [J_new, e_new] = J_LS(yH, yH_sim_new);
+    e_new = reshape(e_new, Nf, 2*Nfcn);
 
-    
-    
     % check convergence
     if (norm(diff_theta) < TRESHOLD_THETA ...
             || norm(J_new - J) < TRESHOLD_J ...
@@ -293,21 +309,30 @@ while ~FLAG_CONVERGENCE
 
     % update
     theta = theta_new;
-    c = c+1;
+    
     J = J_new;
     eH = e_new;
+    yH_sim = yH_sim_new;
 
     % DEBUG
-    fprintf('Iteration #%d\t cost function value %f ',c,J);
-    for ii=1:nth
+    fprintf('Iteration #%d\t cost function value %f ', c, J);
+    for ii = 1:Nparams
         fprintf('\ttheta%d %f ', ii, theta(ii));
     end
     fprintf('\n');
-
+    c = c+1;
 end
 
+% thetaname = ["th1";
+%     "th2";
+%     "th3";
+%     "th4";
+%     "th5";
+%     "th6"];
 
-%% Function
-
+% Error with respect to true theta
+est_err = th_true' - theta;
+fprintf("Initial Error: %4.4f\n", th_true - theta0);
+fprintf("Error: %4.4f\n", est_err);
 
 

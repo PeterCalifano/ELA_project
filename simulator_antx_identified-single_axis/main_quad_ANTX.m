@@ -100,12 +100,13 @@ SetPoint = [0, 0];
 % Time grid
 t = ExcitationM(:, 1);
 simulation_time = t(end) - t(1);
+decimation = 5; % [s]
 
 %% Launch SIMULATOR
 model_name = 'Simulator_Single_Axis';
 
 % Simulate or load sample output
-if ~exist('simout.mat', 'file')
+if exist('simout.mat', 'file')
     output = sim(model_name, 'TimeOut', simulation_time);
     save('simout.mat', "output");
 else
