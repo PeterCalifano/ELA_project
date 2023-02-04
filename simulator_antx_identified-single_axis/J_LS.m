@@ -37,7 +37,7 @@ end
 J = 0;
 
 % J = 1/2 * sum(e'* (R^-1) * e);
-if (Nf2 * Nfcn2)^2 < 100^2 && flag_R == 0 % Use vectorial operation
+if 0 %(Nf2 * Nfcn2)^2 < 100^2 && flag_R == 0 % Use vectorial operation
     warning('TO VALIDATE')
     % Compute deviations
     % 1st col: re(G1), 2nd col: im(G1) to Nth-1 col: re(GN), Nth col: im(GN)

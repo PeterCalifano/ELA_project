@@ -24,7 +24,7 @@ Nsamples = length(time_grid);
 
 % Divide signal into K parts of length M from zero mean signals
 x_frac = 0.5;
-K = 111;
+K = 15;
 
 % Window length
 T_win = time_grid(end)/((K-1)*(1-x_frac)+1);
@@ -170,11 +170,22 @@ G_dq = mean(G_dq_mat, 2);
 H1 = G_dq./G_dd;
 H2 = G_da./G_dd;
 
+
 % Test Coherence evaluation function
 gamma2_dq = EstimateCoherence(G_dq, G_dd, G_qq, 2*pi*f_axis);
 gamma2_da = EstimateCoherence(G_da, G_dd, G_aa, 2*pi*f_axis);
 
-yH = formatFRF([H1, H2]);
+% TEST: USE OF THE TRUE TF
+H1 = evalFreqR(G_qa_true(1), f_axis, 'Hz');
+H2 = evalFreqR(G_qa_true(2), f_axis, 'Hz');
+
+% OPEN POINT: is the model class structurally identifiable? If not -->
+% change model class --> find relations between parameters of assumed model 
+% (likely less than the parameters to estimate) and actual ones of the
+% dynamics.
+
+% yH = formatFRF([H1, H2]);
+yH = ([H1, H2]);
 
 % Determine TF model class
 % First alternative: by looking at state space form of the system
@@ -298,6 +309,7 @@ while ~FLAG_CONVERGENCE
     yH_sim_new = evalFreqR(TF_new, f_axis, 'Hz');
 
     [J_new, e_new] = J_LS(yH, yH_sim_new);
+    % Columns: Re1 Im1 Re2 Im2
     e_new = reshape(e_new, Nf, 2*Nfcn);
 
     % check convergence
@@ -320,7 +332,7 @@ while ~FLAG_CONVERGENCE
         fprintf('\ttheta%d %f ', ii, theta(ii));
     end
     fprintf('\n');
-    c = c+1;
+    c = c + 1;
 end
 
 % thetaname = ["th1";

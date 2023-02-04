@@ -67,7 +67,7 @@ D = [0;
 s = tf('s');
 % NOTE: delay not taken into account by tf here
 G = tf(ss(A, B, C, D));
-
+G_qa_true = G([2, 4]);
 
 % Noise
 %noise.Enabler = 0;

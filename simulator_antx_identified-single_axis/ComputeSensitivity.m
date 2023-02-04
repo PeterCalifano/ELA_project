@@ -50,6 +50,12 @@ for idp = 1:Nparam
 
     yH_pert = evalFreqR(Hmodelstruct(theta), freq, 'Hz');
     dFRFdth{idp} = reshape((yH_pert - TFfreqresp)./dth, length(freq), []);
+    fprintf("\nSensitivity of TF1 Re to th%2d: %3.3g \n", idp, mean(dFRFdth{idp}(:, 1)));
+    fprintf("Sensitivity of TF1 Im to th%2d: %3.3g \n", idp, mean(dFRFdth{idp}(:, 2)));
+    fprintf("Sensitivity of TF2 Re to th%2d: %3.3g \n", idp, mean(dFRFdth{idp}(:, 3)));
+    fprintf("Sensitivity of TF2 Im to th%2d: %3.3g \n", idp, mean(dFRFdth{idp}(:, 4)));
+
 end
+
 
 end
