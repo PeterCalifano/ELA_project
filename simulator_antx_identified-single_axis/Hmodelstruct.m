@@ -20,11 +20,11 @@ function fcn = Hmodelstruct(th)
 
 %% Function code
 s = tf('s');
-den = 981*th(3) - 100* s^2 *th(1) - 100* s^2 *th(4) + 100*s^3 + 100*s*th(1)*th(4) - 100*s*th(2)*th(3);
+den = 9.81*th(3) - s^2 *th(1) - s^2 *th(4) + s^3 + s*th(1)*th(4) - s*th(2)*th(3);
 
-fcn = [(100*s*th(3)*th(5))/den + 100*s*th(6)*(s - th(1))/den; 
 
-       th(5) + th(6)*( th(1)*(100 * s * th(2) - 981) + 100*s*th(2)*(s-th(1)) )/den + th(5) *( (100 * s * th(2) * th(3) ) + 100*s*th(1) * (s-th(4)) )/den];
+fcn = [s*(th(3)*th(5) - th(6)*th(1) + th(6)*s)/den; 
 
+       (9.81*th(3)*th(5) - 9.81*th(6)*th(1) + th(5)*s^3  + th(6)*th(2)*s  - th(4)*th(5)*s)/den];
 
 end
