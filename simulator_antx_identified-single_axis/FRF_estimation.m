@@ -23,8 +23,10 @@ Nsamples = length(time_grid);
 % the frequency bands of interest (control/determination?)
 
 % Divide signal into K parts of length M from zero mean signals
-x_frac = 0.5;
-K = 15;
+% Windows Overlap coefficient
+x_frac = 0.1;
+% Number of Windows
+K = 10;
 
 % Window length
 T_win = time_grid(end)/((K-1)*(1-x_frac)+1);
@@ -88,7 +90,7 @@ Y_q  = cell(1,K);
 X_d  = cell(1,K);
 
 for k = 1:K
-    X1 = fft(d_window{k},Nsamples);
+    X1 = fft(d_window{k}, Nsamples);
     X_d{k} = X1(1:(Nsamples+1)/2);
 
     Y1_ax = fft(ax_window{k},Nsamples);
@@ -140,7 +142,6 @@ G_dq_mat = cell2mat(G_dq_rough);
 G_dq = mean(G_dq_mat, 2);
 
 
-
 % close all
 % 
 % figure
@@ -170,51 +171,83 @@ G_dq = mean(G_dq_mat, 2);
 H1 = G_dq./G_dd;
 H2 = G_da./G_dd;
 
-
 % Test Coherence evaluation function
 gamma2_dq = EstimateCoherence(G_dq, G_dd, G_qq, 2*pi*f_axis);
+title('Coherence of $H_1$')
 gamma2_da = EstimateCoherence(G_da, G_dd, G_aa, 2*pi*f_axis);
+title('Coherence of $H_2$')
 
-% TEST: USE OF THE TRUE TF
-H1 = evalFreqR(G_qa_true(1), f_axis, 'Hz');
-H2 = evalFreqR(G_qa_true(2), f_axis, 'Hz');
+% Select frequency ranges to use for Identification model
+gamma2_thr = 0.6;
+% Create Bool Mask
+MaskFreq = gamma2_dq >= gamma2_thr & gamma2_da >= gamma2_thr;
+% Extrac useful frequency points
+faxis_masked = f_axis(MaskFreq);
+% Estimated FRF of the system
+H_est = [H1(MaskFreq), H2(MaskFreq)];
 
-% OPEN POINT: is the model class structurally identifiable? If not -->
-% change model class --> find relations between parameters of assumed model 
-% (likely less than the parameters to estimate) and actual ones of the
-% dynamics.
+% Guess parameters vector
+theta0 = th_true.*[1.2 1.1 0.8 1.1 0.7 1.1];
 
-% yH = formatFRF([H1, H2]);
-yH = ([H1, H2]);
 
-% Determine TF model class
-% First alternative: by looking at state space form of the system
-% Parameters in theta: Xu Xq Mu Mq Xd Md 
-% syms th [6, 1]
-% syms s % TF variable
-% 
-% % A = [Xu Xq -9.81; Mu Mq 0; 0 1 0];
-% % B = [Xd; Md; 0];
-% % C = [0 1 0; Xu Xq 0];
-% % D = [0;Xd];
-% 
-% A = [th(1) th(2) -9.81; th(3), th(4) 0; 0 1 0];
-% B = [th(5); th(6); 0];
-% C = [0, 1, 0; th(1), th(2), 0];
-% D = [0; th(5)];
-% 
-% Phi = (s*eye(3) - A)^(-1);
-% H = C*Phi*B+D;
-% 
-% % Display matrix
-% pretty(H);
+%% Test Invfreq
+w = 2*pi*faxis_masked;
+num_order = 2;
+den_order = 3;
+% [Gnum1, Gden1] = invfreqs(H_est(:, 1), w, num_order, den_order, [], 1000, [], 'trace');
+[Gnum2, Gden2] = invfreqs(H_est(:, 2), w, num_order, den_order, [], 1000, [], 'trace');
 
-th_true = [-0.1068, 0.1192, -5.9755,  -2.6478, -10.1647, 450.71];
+%%
+% Determine whether FRF dataset uses estimated FRF from Simulink model (0)
+% or the FRF of the "true" model.
+trueflag = 0;
 
-theta0 = th_true.*[1.2 1.85 0.8 1.5 0.7 1.3];
+switch trueflag
+    case 0
+        freqdata = zeros(2, 1, length(faxis_masked));
+        freqdata(1, 1, :) = H_est(:, 1);
+        freqdata(2, 1, :) = H_est(:, 2);
+    case 1
+        freqdata = zeros(2, 1, length(faxis_masked));
+        freqdata(1, 1, :) = freqresp(G_qa_true(1), faxis_masked, 'Hz');
+        freqdata(2, 1, :) = freqresp(G_qa_true(2), faxis_masked, 'Hz');
+end
+
+% Generate initial guess for greyest function
+odefun = 'LongDyn_ODE';
+% Derivative of udot wrt u
+Xu = theta0(1);
+% Derivative of udot wrt q
+Xq = theta0(2);
+% Derivative of qdot wrt u
+Mu = theta0(3);
+% Derivative of qdot wrt q
+Mq = theta0(4);
+% Derivative of udot wrt delta
+Xd = theta0(5);
+% Derivative of qdot wrt delta
+Md = theta0(6);
+
+% Model parameters cell
+parameters = {'Xu', Xu ; 'Xq', Xq; 'Mu', Mu;...
+              'Mq', Mq; 'Xd', Xd; 'Md', Md};
+% Select continuous-time model
+fcn_type = 'c';
+
+% Assembly Frequency Response Data
+data = frd(freqdata, faxis_masked);
+% Create grey model for identification
+greyobj = idgrey(odefun, parameters, fcn_type);
+% Set grey identification options
+greyopt = greyestOptions('Display', 'on');
+
+% Identify model parameters with MATLAB Built-In function greyest()
+[outmodel, x0] = greyest(data, greyobj, greyopt);
 
 % Test function Hmodel
 % fcn_true = minreal(Hmodelstruct(th_true));
+
+
 
 % %%%%%%%%%%%%%%%%%%%%%%%% DEBUG %%%%%%%%%%%%%%%%%%%%%%%%%
 % figure;
@@ -232,44 +265,43 @@ theta0 = th_true.*[1.2 1.85 0.8 1.5 0.7 1.3];
 % legend;
 %%%%%%%%%%%%%%%%%%%%%%%% DEBUG %%%%%%%%%%%%%%%%%%%%%%%%%
 
-TF_new = minreal(Hmodelstruct(theta0));
-% Determine frequency responses of H over grid f
-yH_sim = evalFreqR(TF_new, f_axis, 'Hz');
+%%
+% Determine data for identification with Newton-Raphson method
+faxis = faxis_masked;
+yH = formatFRF(H_est);
 
-Nf = length(f_axis);
+TF_new = minreal(Hmodelstruct(theta0));
+
+% Determine frequency responses of H over grid f
+yH_sim = evalFreqR(TF_new, faxis, 'Hz');
+
+Nf = length(faxis);
 Nfcn = size(TF_new, 1)*size(TF_new, 2);
 
-% R = identity 8default in function=
+% R = identity by default
 [J, eH] = J_LS(yH, yH_sim);
 eH = reshape(eH, Nf, 2*Nfcn);
 
-% dFRFdth = ComputeSensitivity(yH_sim, f_axis, th_true);
+% Optimization procedure to get optimal theta parameters - Newton-Raphson 
 
-% Optimization procedure to get optimal theta parameters
-% Newton-Raphson 
-% TO DO: 
-% 2.1) Verify Sensitivity Function
-% 2.2) Code function to execute Newton Raphson scheme
-% 3) Test output
-
-
-FLAG_CONVERGENCE = 0;
-Nparams = length(th_true);
+CONVERGED = 0;
+Nparams = length(theta0);
 
 % Iterative search cycle
-c = 0;
-Nmax = 20;
-TRESHOLD_THETA = 1e-3;
-TRESHOLD_J = 1e-3;
+c = 0; % Iteration counter
+Nmax = 15; % Max number of iterations
+DTHETA_THR = 1e-3; % Step tolerance
+DJ_THR = 1e-3; % Function Tolerance
 
+% Initialize guess vector
 theta = theta0;
 
-while ~FLAG_CONVERGENCE
+while ~CONVERGED
 
     % FOR DEVELOPMENT --> STOP CYCLE AT 1
-%     FLAG_CONVERGENCE = 1;
+    %     CONVERGED = 1;
 
-    % Static allocation of Gradient vector and Hessian Matrix
+    % Initialization of Gradient vector and Hessian Matrix
     GJ = zeros(Nparams, 1);
     HJ = zeros(Nparams, Nparams);
 
@@ -277,9 +309,8 @@ while ~FLAG_CONVERGENCE
     % function matrix
     Rinv = eye(2*Nfcn);
 
-    % nth indexes the parameters
-    
-    dFRFdth = ComputeSensitivity(yH_sim, f_axis, theta);
+    % idp indexes the parameter in theta
+    dFRFdth = ComputeSensitivity(yH_sim, faxis, theta);
 
     for ff = 1:Nf
         dFRFdth_idp = zeros(4, Nparams);
@@ -287,7 +318,6 @@ while ~FLAG_CONVERGENCE
             dFRFdth_idp(:, idp) = dFRFdth{idp}(ff, :);
         end
 
-        % Gradient and Hessian are too large in value
         t = -eH(ff, :) * Rinv * dFRFdth_idp;
         GJ = GJ + t';
 
@@ -306,17 +336,24 @@ while ~FLAG_CONVERGENCE
     % Evaluate new Transfer Function
     TF_new = minreal(Hmodelstruct(theta_new));
     % Determine frequency response
-    yH_sim_new = evalFreqR(TF_new, f_axis, 'Hz');
-
+    yH_sim_new = evalFreqR(TF_new, faxis, 'Hz');
+    % Evaluate new cost and deviations
     [J_new, e_new] = J_LS(yH, yH_sim_new);
-    % Columns: Re1 Im1 Re2 Im2
+    % Reshape deviations array: Columns: Re1 Im1 Re2 Im2
     e_new = reshape(e_new, Nf, 2*Nfcn);
 
+    % Stop the iteration if the cost is increasing
+    cost_prev = J;
+    cost_now = J_new;
+    if cost_now - cost_prev > 1e3
+        error('Divergence occurred: Cost is increasing')
+    end
+
     % check convergence
-    if (norm(diff_theta) < TRESHOLD_THETA ...
-            || norm(J_new - J) < TRESHOLD_J ...
+    if (norm(diff_theta) < DTHETA_THR ...
+            || norm(J_new - J) < DJ_THR ...
             || c > Nmax)
-        FLAG_CONVERGENCE = true;
+        CONVERGED = true;
     end
 
     % update

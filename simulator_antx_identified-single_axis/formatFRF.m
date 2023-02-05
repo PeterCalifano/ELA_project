@@ -1,5 +1,6 @@
 function FRF_ReIm = formatFRF(FRF)
 %% PROTOTYPE
+% FRF_ReIm = formatFRF(FRF)
 % -------------------------------------------------------------------------------------------------------------
 %% DESCRIPTION
 % What the function does

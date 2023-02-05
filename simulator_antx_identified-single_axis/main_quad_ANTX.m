@@ -18,8 +18,6 @@ clc;
 
 addpath('datasets','common','common/simulator-toolbox','common/simulator-toolbox/attitude_library','common/simulator-toolbox/trajectory_library');
 
- 
-
 DefaultFontSize = 16;
 set(groot, 'defaultAxesTickLabelInterpreter', 'latex');
 set(groot, 'defaultLegendInterpreter', 'latex');
@@ -27,9 +25,8 @@ set(groot, 'defaulttextinterpreter', 'latex');
 set(0, 'defaultAxesFontSize', DefaultFontSize)
 
 %% Model parameters
-
 % Initial model (state: longitudinal velocity, pitch rate, pitch angle; input: normalised pitching moment; outputs: state and longitudinal acceleration)
-% Are these the true parameters? 
+ 
 % Derivative of udot wrt u
 Xu = -0.1068;
 % Derivative of udot wrt q
@@ -42,6 +39,8 @@ Mq = -2.6478;
 Xd = -10.1647;
 % Derivative of qdot wrt delta
 Md = 450.71;
+
+th_true = [Xu, Xq, Mu, Mq, Xd, Md];
 
 %% State space model
 A = [Xu, Xq, -9.81; 
@@ -63,14 +62,10 @@ D = [0;
     0; 
     Xd];
 
-
 s = tf('s');
-% NOTE: delay not taken into account by tf here
-G = tf(ss(A, B, C, D));
-G_qa_true = G([2, 4]);
 
 % Noise
-%noise.Enabler = 0;
+% noise.Enabler = 0;
 noise.Enabler = 1;
 
 noise.pos_stand_dev = noise.Enabler * 0.0011;                            	%[m]
@@ -90,8 +85,7 @@ delay.mixer = 1;
 
 parameters_controller                    
 
-%% M injection example (sweeep: first column time vector, secondo column time history of pitching moment) 
-
+%% M injection example (sweeep: first column time vector, second column time history of pitching moment) 
 load ExcitationM
 % SetPoint for Translation control
 SetPoint = [0, 0];
@@ -100,7 +94,7 @@ SetPoint = [0, 0];
 % Time grid
 t = ExcitationM(:, 1);
 simulation_time = t(end) - t(1);
-decimation = 5; % [s]
+decimation = 1; % [s]
 
 %% Launch SIMULATOR
 model_name = 'Simulator_Single_Axis';
