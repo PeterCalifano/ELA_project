@@ -164,7 +164,9 @@ q = q(5:end);
 % TO DO: EVALUATE WHETHER LOWPASS FILTERING IS USEFUL
 % Call script to estimate Frequency Response Function from output time signals
 % output_delay = 0.016; % [s]
-FRF_estimation;
+
+% Call script for Model Identification
+IdentifyModel;
 
 
 
