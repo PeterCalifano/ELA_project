@@ -16,7 +16,7 @@ close all;
 clear;
 clc;
 
-addpath('datasets','common','common/simulator-toolbox','common/simulator-toolbox/attitude_library','common/simulator-toolbox/trajectory_library');
+% addpath('datasets','common','common/simulator-toolbox','common/simulator-toolbox/attitude_library','common/simulator-toolbox/trajectory_library');
 
 DefaultFontSize = 16;
 set(groot, 'defaultAxesTickLabelInterpreter', 'latex');
@@ -97,52 +97,71 @@ simulation_time = t(end) - t(1);
 decimation = 1; % [s]
 
 %% Launch SIMULATOR
+save('input_workspace.mat');
 model_name = 'Simulator_Single_Axis';
 
 % Simulate or load sample output
-if exist('simout.mat', 'file')
-    output = sim(model_name, 'TimeOut', simulation_time);
-    save('simout.mat', "output");
-else
-    load('simout.mat');
-end
+% if exist('simout.mat', 'file')
+output = sim(model_name, 'TimeOut', simulation_time);
+save('simout.mat', "output");
+% else
+%     load('simout.mat');
+% end
 
 %% Delete temporary files
 
-% if exist('slprj','dir')
-%     rmdir('slprj', 's')                                                    
-% end
+if exist('slprj','dir')
+    rmdir('slprj', 's')                                                    
+end
 
-%%
+%% Signals Pre-Processing
+Excit_signal = output.Excit_signal;
+RemoveZeroInputMask = Excit_signal ~= 0;
 
-% Remove delay from input (last 4) and output (first 4)
-Excit_signal = output.Excit_signal(1:end-4);
+% Extract useful input/output samples 
+Mtot = output.Mtot(RemoveZeroInputMask);
+time_grid = output.time_grid(RemoveZeroInputMask);
+ax = output.ax(RemoveZeroInputMask);
+q = output.q(RemoveZeroInputMask);
 
 % dt = 1/250; % 250 Hz, defined in parameters_controller
-time_grid = output.time_grid(5:end);
-ax = output.ax(5:end);
-q = output.q(5:end);
+time_grid = time_grid(5:end);
+% Consider delay of the output (4 samples)
+Mtot = Mtot(1:end-4);
+ax = ax(5:end);
+q = q(5:end);
 
-figure;
-plot(time_grid, Excit_signal, '-');
-xlabel('Time [s]');
-ylabel('Excitation signal')
-grid minor;
+% TO MODIFY: DELAY APPLIES TO TIME GRID, not SAMPLE INDEX. Must be
+% equivalent to: 
 
-figure;
-plot(time_grid, ax, '-');
-xlabel('Time [s]');
-ylabel('Longitudinal acceleration [m/s^2]')
-grid minor;
+% s_time_out = s_time + 1/fs*4; %sampling time for the output + delay
+% % Normalized pitch moment resampling at 250 Hz
+% M = M - mean(M); %removed bias
+% meas.M = interp1(tM,M,s_time_in);
 
-figure;
-plot(time_grid, rad2deg(q), '-');
-xlabel('Time [s]')
-ylabel('Pith rate q [deg/s]');
-grid minor;
+% Remove time samples where Excitation signal 
 
-close all
+% figure;
+% plot(time_grid, Mtot, '-');
+% xlabel('Time [s]');
+% ylabel('Excitation signal')
+% grid minor;
+% 
+% figure;
+% plot(time_grid, ax, '-');
+% xlabel('Time [s]');
+% ylabel('Longitudinal acceleration [m/s^2]')
+% grid minor;
+% 
+% figure;
+% plot(time_grid, rad2deg(q), '-');
+% xlabel('Time [s]')
+% ylabel('Pith rate q [deg/s]');
+% grid minor;
+% 
+% close all
 
+% TO DO: EVALUATE WHETHER LOWPASS FILTERING IS USEFUL
 % Call script to estimate Frequency Response Function from output time signals
 % output_delay = 0.016; % [s]
 FRF_estimation;
