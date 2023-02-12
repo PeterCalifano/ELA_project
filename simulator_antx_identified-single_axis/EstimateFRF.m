@@ -137,8 +137,23 @@ H2 = G_da./G_dd;
 % Test Coherence evaluation function
 gamma2_dq = EstimateCoherence(G_dq, G_dd, G_qq, 2*pi*f_axis);
 title('Coherence of $H_1$')
+ax = gca;
+ax.XAxisLocation = 'bottom'; 
+ax.YAxisLocation = 'left';
+ax.XMinorTick = 'on';
+ax.YMinorTick = 'on';
+ax.LineWidth = 1.04;
+hold off;
+
 gamma2_da = EstimateCoherence(G_da, G_dd, G_aa, 2*pi*f_axis);
 title('Coherence of $H_2$')
+ax = gca;
+ax.XAxisLocation = 'bottom'; 
+ax.YAxisLocation = 'left';
+ax.XMinorTick = 'on';
+ax.YMinorTick = 'on';
+ax.LineWidth = 1.04;
+hold off;
 
 % Select frequency ranges to use for Identification model
 gamma2_thr = 0.7;

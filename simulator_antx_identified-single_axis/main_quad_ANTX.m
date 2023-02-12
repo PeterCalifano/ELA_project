@@ -16,13 +16,13 @@ close all;
 clear;
 clc;
 
-% addpath('datasets','common','common/simulator-toolbox','common/simulator-toolbox/attitude_library','common/simulator-toolbox/trajectory_library');
+addpath('common','common/simulator-toolbox','common/simulator-toolbox/attitude_library','common/simulator-toolbox/trajectory_library');
 
 DefaultFontSize = 16;
 set(groot, 'defaultAxesTickLabelInterpreter', 'latex');
 set(groot, 'defaultLegendInterpreter', 'latex');
 set(groot, 'defaulttextinterpreter', 'latex');
-set(0, 'defaultAxesFontSize', DefaultFontSize)
+set(0, 'defaultAxesFontSize', DefaultFontSize);
 
 %% Model parameters
 % Initial model (state: longitudinal velocity, pitch rate, pitch angle; input: normalised pitching moment; outputs: state and longitudinal acceleration)
