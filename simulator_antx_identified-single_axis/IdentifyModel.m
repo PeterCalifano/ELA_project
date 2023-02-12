@@ -438,7 +438,7 @@ TF_spafdr = spafdr(iddata([q_data, ax_data], delta_data, sample_time, 'Frequency
 [mag_b, phase_b] = bode(TF_spafdr, w_out);
 
 % NOTE: 20 or 10 to convert H in log scale --> check what bode() uses
-
+legend_cell = {'greyest model', 'spafdr', 'KW estimator', '', ''};
 % TF: delta --> q
 id = 1;
 figure;
@@ -471,8 +471,8 @@ hold on;
 semilogx(w_out, (squeeze(phase_a(id, 1, :))), '-', 'LineWidth', 1.05, 'DisplayName', 'greyest model');
 semilogx(w_out, (squeeze(phase_b(id, 1, :))), '-', 'LineWidth', 1.05, 'DisplayName', 'spafdr');
 semilogx(w_axis, rad2deg(angle(H_est(:, id))), '-', 'LineWidth', 1.05, 'DisplayName', 'KW estimator');
-yline(-180, 'k--')
-yline(+180, 'k--')
+yline(-180, 'k--', 'DisplayName', '');
+yline(+180, 'k--', 'DisplayName', '');
 grid minor
 axis auto;
 
@@ -485,7 +485,8 @@ ax.LineWidth = 1.04;
 xlabel('Frequency [rad/s]')
 ylabel('Phase [deg]')
 title('Bode phase of $H_{\delta q}$')
-legend()
+legend(legend_cell);
+
 
 hold off;
 
@@ -534,7 +535,7 @@ ax.LineWidth = 1.04;
 xlabel('Frequency [rad/s]');
 ylabel('Phase [deg]');
 title('Bode phase of $H_{\delta a_x}$');
-legend();
+legend(legend_cell);
 
 hold off;
 
