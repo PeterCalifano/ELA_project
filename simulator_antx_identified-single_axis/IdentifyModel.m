@@ -24,7 +24,7 @@ switch method
         K = 8;
         Window = hanning(floor(N/K));
 
-        [cohr1, f1] = mscohere(delta_zm, q_zm, Window, [], [], 1/sample_time);
+        [cohr1, f1] = mscohere(delta_zm, q_zm, Window, [], [], 1/sample_time); % f1 is in Hz
         [cohr2, ~] = mscohere(delta_zm, ax_zm, Window, [], [], 1/sample_time);
 
         figure
@@ -37,20 +37,20 @@ switch method
         semilogx(f1(cohr2 > 0.6), cohr2(cohr2 > 0.6), '-');
         xlabel('Frequency [Hz]')
         grid minor
-
+        
         f_window = f1(cohr1 > 0.6 & cohr2 > 0.6);
         % f_window = f_window(f_window <= 11);
 
         % Define data structure for greyest
         data_time = iddata([q_zm, ax_zm], delta_zm, sample_time);
         % Transform to frequency domain
-        data = fft(data_time);
-
+        data = fft(data_time); % frequency in rad/s
+        
         q_f = data.OutputData(:, 1);
         ax_f = data.OutputData(:, 2);
         delta_f = data.InputData;
-        faxis = data.Frequency ./ 2*pi;
-
+        faxis = data.Frequency ./ (2*pi);
+        
         f_lb = f_window(1);
         f_ub = f_window(end);
 
