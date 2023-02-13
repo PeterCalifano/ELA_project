@@ -23,7 +23,7 @@ set(groot, 'defaultAxesTickLabelInterpreter', 'latex');
 set(groot, 'defaultLegendInterpreter', 'latex');
 set(groot, 'defaulttextinterpreter', 'latex');
 set(0, 'defaultAxesFontSize', DefaultFontSize);
-
+rng default;
 %% Model parameters
 % Initial model (state: longitudinal velocity, pitch rate, pitch angle; input: normalised pitching moment; outputs: state and longitudinal acceleration)
  
@@ -115,6 +115,8 @@ if exist('slprj','dir')
 end
 
 %% Signals Pre-Processing
+N_delay = 1;
+
 Excit_signal = output.Excit_signal;
 RemoveZeroInputMask = Excit_signal ~= 0;
 
@@ -125,11 +127,11 @@ ax = output.ax(RemoveZeroInputMask);
 q = output.q(RemoveZeroInputMask);
 
 % dt = 1/250; % 250 Hz, defined in parameters_controller
-time_grid = time_grid(5:end);
+time_grid = time_grid((1+N_delay):end);
 % Consider delay of the output (4 samples)
-Mtot = Mtot(1:end-4);
-ax = ax(5:end);
-q = q(5:end);
+Mtot = Mtot(1:(end-N_delay));
+ax = ax((1+N_delay):end);
+q = q((1+N_delay):end);
 
 % TO MODIFY: DELAY APPLIES TO TIME GRID, not SAMPLE INDEX. Must be
 % equivalent to: 

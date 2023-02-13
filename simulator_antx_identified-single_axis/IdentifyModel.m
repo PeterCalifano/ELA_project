@@ -69,7 +69,7 @@ switch method
         model_fun = 'LongDyn_ODE';
         [fitmodel, theta, est_unc] = greyest_wrapper(data_to_fit, model_fun, theta0);
 
-
+        
     case 1
 
 

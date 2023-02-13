@@ -17,6 +17,9 @@ K = 20;
 % Window length
 T_win = time_grid(end)/((K-1)*(1-x_frac)+1);
 
+% Number of samples
+Nsamples = 2*round(Nsamples/2)-1;
+
 % Number of samples in each window
 N_win = round(Nsamples/((K-1)*(1-x_frac)+1));
 
@@ -40,11 +43,11 @@ t_int{K} = time_grid(end-N_win:end);
 
 for k=2:K-1
 
-    indexes = ceil((1-x_frac)*(k-1)*N_win:(1-x_frac)*(k-1)*N_win+N_win);
+    indexes = ceil((1-x_frac)*(k-1)*N_win):ceil((1-x_frac)*(k-1)*N_win+N_win);
 
-    while indexes(end) > length(time_grid)
-        indexes(end) = [];
-    end
+%     while indexes(end) > length(time_grid)
+%         indexes(end) = [];
+%     end
 
     yax_int{k} = ax_zm(indexes);
     yq_int{k} = q_zm(indexes);
@@ -75,7 +78,7 @@ Y_q  = cell(1,K);
 X_d  = cell(1,K);
 
 for k = 1:K
-    upper_index = floor((Nsamples+1)/2);
+    upper_index = (Nsamples+1)/2;
 
     % Why is fft called with Nsamples as number of samples?
     X1 = fft(d_window{k}, Nsamples);
@@ -102,11 +105,11 @@ G_da_rough = cell(1,K);
 G_dq_rough = cell(1,K);
 
 for k = 1:K
-    G_aa_rough{k} = 2/T_win*abs(Y_ax{k}).^2 ;
-    G_qq_rough{k} = 2/T_win*abs(Y_q{k}).^2;
-    G_dd_rough{k} = 2/T_win*abs(X_d{k}).^2;
-    G_da_rough{k} = 2/T_win* (conj(X_d{k}).*Y_ax{k});
-    G_dq_rough{k} = 2/T_win* (conj(X_d{k}).*Y_q{k});
+    G_aa_rough{k} = (2/T_win)*abs(Y_ax{k}).^2 ;
+    G_qq_rough{k} = (2/T_win)*abs(Y_q{k}).^2;
+    G_dd_rough{k} = (2/T_win)*abs(X_d{k}).^2;
+    G_da_rough{k} = (2/T_win)* (conj(X_d{k}).*Y_ax{k});
+    G_dq_rough{k} = (2/T_win)* (conj(X_d{k}).*Y_q{k});
 
 end
 
