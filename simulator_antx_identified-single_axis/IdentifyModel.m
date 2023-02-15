@@ -29,15 +29,17 @@ switch method
 
         figure
         subplot(2, 1, 1)
-        semilogx(f1(cohr1 > 0.6), cohr1(cohr1 > 0.6), '-');
+        semilogx(f1(cohr1 > 0.6), cohr1(cohr1 > 0.6), '-', 'LineWidth', 1.05);
         xlabel('Frequency [Hz]')
         grid minor
+        title('Coherence $\delta$ --> $q$')
 
         subplot(2, 1, 2)
-        semilogx(f1(cohr2 > 0.6), cohr2(cohr2 > 0.6), '-');
+        semilogx(f1(cohr2 > 0.6), cohr2(cohr2 > 0.6), '-', 'LineWidth', 1.05);
         xlabel('Frequency [Hz]')
         grid minor
-        
+        title('Coherence $\delta$ --> $a_x$')
+
         f_window = f1(cohr1 > 0.6 & cohr2 > 0.6);
         % f_window = f_window(f_window <= 11);
 
@@ -464,7 +466,6 @@ legend()
 
 hold off;
 
-
 % Phase
 subplot(2, 1, 2);
 hold on;
@@ -534,16 +535,85 @@ ax.YMinorTick = 'on';
 ax.LineWidth = 1.04;
 xlabel('Frequency [rad/s]');
 ylabel('Phase [deg]');
-title('Bode phase of $H_{\delta a_x}$');
+title('Bode phase of $G_{\delta a_x}$');
 legend(legend_cell);
 
 hold off;
 
-return
-% 3) Bodeplots of identified model with confidence intervals from (1)
 
+% 3) Bodeplots of identified model with confidence intervals from (1)
+figure;
+b_plot = bodeplot(fitmodel);
+showConfidence(b_plot, 1);
+grid minor
+axis auto
+ax = gca;
+ax.XAxisLocation = 'bottom';
+ax.YAxisLocation = 'left';
+ax.XMinorTick = 'on';
+ax.YMinorTick = 'on';
+ax.LineWidth = 1.04;
+title('Bode diagrams $[G_{\delta q}; G_{\delta a_x}]$ with 1\sigma confidence interval', 'Interpreter', 'Latex')
+
+% 3b) Pole-Zero with uncertainty interval
+p = figure;
+pz_plot = iopzplot(fitmodel);
+showConfidence(pz_plot, 3)
+hold on;
+
+for i = 1:2
+%     subplot(2, 1, i)
+    hold on;
+    grid minor
+    axis auto
+    ax = gca;
+    ax.XAxisLocation = 'bottom';
+    ax.YAxisLocation = 'left';
+    ax.XMinorTick = 'on';
+    ax.YMinorTick = 'on';
+    ax.LineWidth = 1.05;
+end
+title('Poles/Zeros of $H_{\delta a_x}$ with 3$\sigma$ confidence interval')
 
 % 4) MCM to sample uncertainty space and get corresponding FRF
+% Assume Gaussian distribution
+N_samples = 50;
+C = diag(est_unc.^2);
+% Sample uncertain parameter space
+Theta_sampled = mvnrnd(theta, C, N_samples)';
+
+% Build uncertain state space
+A_unc = zeros(3, 3, N_samples);
+B_unc = zeros(3, 1, N_samples);
+C_unc = zeros(2, 3, N_samples);
+D_unc  = zeros(2, 1, N_samples);
+
+for id = 1:N_samples
+    [A_unc(:, :, id), B_unc(:, :, id), C_unc(:, :, id), D_unc(:, :, id)] = LongDyn_ODE(Theta_sampled(1, id), Theta_sampled(2, id),Theta_sampled(3, id),Theta_sampled(4, id),...
+        Theta_sampled(5, id), Theta_sampled(6, id));
+end
+
+
+unc_sys = ss(A_unc, B_unc, C_unc, D_unc);
+% Define input/output names
+unc_sys.u = 'M';
+unc_sys.y = {'q','ax'};
+
+figure;
+bodeplot(fitmodel, '*-r'); % , 'Linewidth', 1.04, 'Color', '#dd3322');
+hold on;
+bodeplot(unc_sys, '-k'); %, 'Linewidth', 1.02', 'Color', '#111111');
+grid minor
+axis auto
+legend('Nominal identified model', 'Uncertain models')
+
+figure;
+iopzplot(fitmodel, '*-r'); % , 'Linewidth', 1.04, 'Color', '#dd3322');
+hold on;
+iopzplot(unc_sys, '-k'); %, 'Linewidth', 1.02', 'Color', '#111111');
+grid minor
+axis auto
+legend('Nominal identified model', 'Uncertain models')
 
 % For validation:
 % 1) Identified model simulation with parameters and corresponding
@@ -555,6 +625,7 @@ return
 
 % Estimation of the variance q, ax from zero input portions of the output
 % signals?
+
 
 
 
