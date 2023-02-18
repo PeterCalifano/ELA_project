@@ -52,7 +52,15 @@ switch method
         ax_f = data.OutputData(:, 2);
         delta_f = data.InputData;
         faxis = data.Frequency ./ (2*pi);
-        
+
+        figure;
+        semilogy(faxis, abs(delta_f), 'k-', 'LineWidth', 1.01)
+        xlabel('Frequency [Hz]')
+        ylabel('$|M(f)|$ [dB]')
+        grid minor
+        axis auto
+        title('Input signal - Frequency spectrum')
+
         f_lb = f_window(1);
         f_ub = f_window(end);
 
