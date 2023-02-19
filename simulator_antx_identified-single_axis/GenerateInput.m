@@ -50,7 +50,7 @@ switch signal_type
     case 3 % Pseudo Random Binary Sequence
         t0 = params.t0;
         T = params.T;
-        dt = T/10;
+        dt = T/100;
         tf = params.tf;
         timevec = t0:dt:tf;
 
@@ -150,6 +150,17 @@ switch signal_type
         if nargout > 1
             timevec = linspace(0, (3*N+1)*TU, length(signal));
         end
+
+
+end
+
+if isrow(timevec) 
+    timevec = timevec';
+end
+
+if isrow(signal) 
+    signal = signal';
+end
 
 
 end

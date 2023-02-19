@@ -48,7 +48,7 @@ fcn_type = 'c';
 % Create grey model for identification
 greyobj = idgrey(model_fun, parameters, fcn_type);
 % Set grey identification options
-greyopt = greyestOptions('Display', 'on');
+greyopt = greyestOptions('Display', 'off');
 
 % Identify model parameters with MATLAB Built-In function greyest()
 [fitmodel, ~] = greyest(data_to_fit, greyobj, greyopt);

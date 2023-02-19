@@ -24,6 +24,8 @@ set(groot, 'defaultLegendInterpreter', 'latex');
 set(groot, 'defaulttextinterpreter', 'latex');
 set(0, 'defaultAxesFontSize', DefaultFontSize);
 rng default;
+
+
 %% Model parameters
 % Initial model (state: longitudinal velocity, pitch rate, pitch angle; input: normalised pitching moment; outputs: state and longitudinal acceleration)
  
@@ -90,15 +92,14 @@ load ExcitationM
 % SetPoint for Translation control
 SetPoint = [0, 0];
 
-%% Values selected
+%% Launch SIMULATOR
+model_name = 'Simulator_Single_Axis';
+save('input_workspace.mat');
+
 % Time grid
 t = ExcitationM(:, 1);
 simulation_time = t(end) - t(1);
 decimation = 1; % [s]
-
-%% Launch SIMULATOR
-save('input_workspace.mat');
-model_name = 'Simulator_Single_Axis';
 
 % Simulate or load sample output
 % if exist('simout.mat', 'file')
@@ -168,8 +169,11 @@ q = q((1+N_delay):end);
 % output_delay = 0.016; % [s]
 
 % Call script for Model Identification
-IdentifyModel;
 
+
+% IdentifyModel;
+
+OptimizeIdentification;
 
 
 %% END OF CODE
