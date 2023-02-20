@@ -29,8 +29,8 @@ UB = [40, 5*60, 50];
 
 % 3211 [8.173686814228478,2.521058987690398e+02,20.019986773376180]
 
-% [optimal_input, ] = ga(@(x) IdentificationExperiment(x, theta0,...
-%     metric_selector), length(LB), ga_opts);
+[optimal_input, ] = ga(@(x) IdentificationExperiment(x, theta0,...
+    metric_selector), length(LB), [], [], [], [], LB, UB, [], [], ga_opts);
 
 
 x = [8.173686814228478,2.521058987690398e+02,20.019986773376180];
@@ -199,6 +199,12 @@ faxis = data.Frequency ./ (2*pi);
 
 f_lb = f_window(1);
 f_ub = f_window(end);
+
+
+if length(f_window) < 20 % Break cycle if window of available frequency is too narrow
+    J = 1e10;
+    return;
+end
 
 id_f = faxis >= f_lb & faxis <= f_ub;
 q_data = q_f(id_f);
