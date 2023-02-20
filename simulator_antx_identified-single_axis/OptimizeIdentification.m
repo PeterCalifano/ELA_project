@@ -1,11 +1,12 @@
 % Optimization of the experiment for better model identification
 theta0 = th_true.*[1.2 1.1 0.8 1.1 0.7 1.1];
-x0 = [8, 295, 0.02, 50];
+% x0 = [8, 295, 0.02, 50];
+x0 = [8,295,20];
 metric_selector = 1;
 
 
-% J = IdentificationExperiment(x0, theta0, metric_selector);
-% disp(J);
+J = IdentificationExperiment(x0, theta0, metric_selector);
+disp(J);
 
 
 fmincon_opts = optimoptions("fmincon", "Algorithm", 'interior-point',...
@@ -13,17 +14,94 @@ fmincon_opts = optimoptions("fmincon", "Algorithm", 'interior-point',...
        'UseParallel', false, 'Display', 'iter', 'OptimalityTolerance', 1e-6);
 
 ga_opts = optimoptions("ga", "Display", 'iter', 'CrossoverFraction', 0.7, ...
-    'FunctionTolerance', 1e-4, 'MaxTime', 10*60, 'PopulationSize', 50, 'UseParallel', false);
+    'FunctionTolerance', 1e-4, 'MaxTime', 10*60, 'PopulationSize', 100, 'UseParallel', false);
 
-LB = [5, 1*60, 0.001, 1]; 
-UB = [40, 5*60, 0.1, 150]; 
+% sine sweep
+% LB = [5, 1*60, 0.001, 1]; 
+% UB = [40, 5*60, 0.1, 150]; 
+
+% 3211
+LB = [5, 1*60, 5]; 
+UB = [40, 5*60, 50]; 
 
 % [optimal_input, ] = fmincon(@(x) IdentificationExperiment(x, theta0,...
 %     metric_selector), x0, [], [], [], [], LB, UB, [], fmincon_opts);
 
+% 3211 [8.173686814228478,2.521058987690398e+02,20.019986773376180]
 
-[optimal_input, ] = ga(@(x) IdentificationExperiment(x, theta0,...
-    metric_selector), length(LB), ga_opts);
+% [optimal_input, ] = ga(@(x) IdentificationExperiment(x, theta0,...
+%     metric_selector), length(LB), ga_opts);
+
+
+x = [8.173686814228478,2.521058987690398e+02,20.019986773376180];
+
+% Unpack parameters
+t0 = 0;
+K = x(1);
+tfin = x(2);
+% T = x(2);
+% f0 = x(3);
+% ff = x(4);
+
+ N = x(3);
+
+signal_type = 4;
+
+% Generate Input
+% params.t0 = t0;
+% params.tf = tf;
+% params.T = T;
+
+% params.t0 = t0;
+params.tf = tfin;
+% params.dt = sample_time;
+% params.ff = ff;
+% params.f0 = f0;
+params.N = N;
+
+[signal, timevec] = GenerateInput(params, signal_type);
+ExcitationM = [timevec, signal];
+
+% Time grid
+t = ExcitationM(:, 1);
+simulation_time = t(end) - t(1);
+
+% Simulate system
+sim_object = Simulink.SimulationInput(model_name);
+sim_object = setVariable(sim_object, 'ExcitationM', ExcitationM);
+sim_object = sim_object.setModelParameter('StopTime', num2str(simulation_time));
+
+output = sim(sim_object);
+
+% Signals Pre-Processing
+N_delay = 1;
+
+Excit_signal = output.Excit_signal;
+% RemoveZeroInputMask = Excit_signal ~= 0;
+
+% Extract useful input/output samples
+Mtot = output.Mtot;
+time_grid = output.time_grid;
+ax = output.ax;
+q = output.q;
+
+% dt = 1/250; % 250 Hz, defined in parameters_controller
+time_grid = time_grid((1+N_delay):end);
+% Consider delay of the output (4 samples)
+Mtot = Mtot(1:(end-N_delay));
+ax = ax((1+N_delay):end);
+q = q((1+N_delay):end);
+
+% Model identification process
+Nsamples = length(time_grid);
+
+IdentifyModel;
+
+
+
+
+
+
 
 
 % Prototype objective function:
@@ -42,24 +120,24 @@ t0 = 0;
 K = x(1);
 tf = x(2);
 % T = x(2);
-f0 = x(3);
-ff = x(4);
+% f0 = x(3);
+% ff = x(4);
 
-% N = x(5);
+ N = x(3);
 
-signal_type = 1;
+signal_type = 4;
 
 % Generate Input
 % params.t0 = t0;
 % params.tf = tf;
 % params.T = T;
 
-params.t0 = t0;
+% params.t0 = t0;
 params.tf = tf;
-params.dt = sample_time;
-params.ff = ff;
-params.f0 = f0;
-% params.N = N;
+% params.dt = sample_time;
+% params.ff = ff;
+% params.f0 = f0;
+params.N = N;
 
 [signal, timevec] = GenerateInput(params, signal_type);
 ExcitationM = [timevec, signal];
@@ -71,7 +149,7 @@ simulation_time = t(end) - t(1);
 % Simulate system
 sim_object = Simulink.SimulationInput(model_name);
 sim_object = setVariable(sim_object, 'ExcitationM', ExcitationM);
-setModelParameter(sim_object, 'StopTime', simulation_time);
+sim_object = sim_object.setModelParameter('StopTime', num2str(simulation_time));
 
 output = sim(sim_object);
 
@@ -132,7 +210,7 @@ data_to_fit = iddata([q_data, ax_data], delta_data, sample_time,...
 
 % Generate initial guess for greyest function
 model_fun = 'LongDyn_ODE';
-[~, ~, est_unc] = greyest_wrapper(data_to_fit, model_fun, theta0);
+[~, est_params, est_unc] = greyest_wrapper(data_to_fit, model_fun, theta0);
 
 % Compute Objective function Cost
 
@@ -143,6 +221,8 @@ switch metric_selector
         J = max(est_unc);
     case 3
         J = det(diag(est_unc));
+    case 4
+        J = sum(est_unc./est_params);
 end
 
 

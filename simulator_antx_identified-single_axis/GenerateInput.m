@@ -78,10 +78,11 @@ switch signal_type
             f_signal = faxis;
         
         end
-
+        
     case 4 % 3211 sequence
 %         t0 = params.t0;
         N = params.N;
+        N = round(N);
         dt = 1/500;
         tf = params.tf;
 
@@ -103,7 +104,8 @@ switch signal_type
         signal_unit(7*tunit_length+1 : 8*tunit_length) = -1;
 
         signal_unit = signal_unit';
-
+        
+        
         % Concatenate N signals
         signal = repmat(signal_unit, N, 1);
         zero_unit = zeros(tunit_length, 1);
@@ -116,6 +118,7 @@ switch signal_type
         if nargout > 1
             timevec = linspace(0, (8*N+1)*TU, length(signal));
         end
+        signal = signal.*0.75;
 
     case 5 % Doublet
 

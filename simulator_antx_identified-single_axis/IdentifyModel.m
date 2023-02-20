@@ -197,6 +197,7 @@ switch method
 
                     % update
                     theta = theta_new;
+                    
 
                     J = J_new;
                     eH = e_new;
