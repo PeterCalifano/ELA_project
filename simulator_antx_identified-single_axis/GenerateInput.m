@@ -33,7 +33,6 @@ switch signal_type
         f_signal = f0 + (ff-f0) * (timevec - t0)./(tf-t0);
         signal = sin(2*pi*f_signal.*timevec);
 
-
     case 2 % Logarithmic (exp) Sine Sweep
 
         t0 = params.t0;
@@ -50,11 +49,17 @@ switch signal_type
     case 3 % Pseudo Random Binary Sequence
         t0 = params.t0;
         T = params.T;
-        dt = T/100;
-        tf = params.tf;
-        timevec = t0:dt:tf;
 
-        N = ceil(tf/T) + 1;
+        %         if isfield(params, 'dt')
+        %             dt = params.dt;
+        %         else
+        dt = T/200;
+        %         end
+
+        tf = params.tf;
+        timevec = 0:dt:(tf-t0);
+
+        N = ceil((tf-t0)/T) + 1;
         RBS = (-1).^(round(rand(N, 1)));
 
         id = 0;
@@ -63,7 +68,7 @@ switch signal_type
         for i = 1:length(timevec)
             if mod(timevec(i), T) == 0
                 id = id + 1;
-                signal(i) = RBS(id);        
+                signal(i) = RBS(id);
             else
                 signal(i) = RBS(id);
             end
@@ -71,26 +76,30 @@ switch signal_type
         end
 
         if nargout > 2
-            n = 2^nextpow2(length(timevec));    
+            n = 2^nextpow2(length(timevec));
             S = fft(signal, n);
             faxis = (1/dt)*(0:(n/2))/n;
-            S = S((n/2):end);       
+            S = S((n/2):end);
             f_signal = faxis;
-        
+
         end
-        
+
+        timevec = timevec + t0;
+        signal = signal.*0.6;
+
     case 4 % 3211 sequence
 %         t0 = params.t0;
         N = params.N;
         N = round(N);
-        dt = 1/500;
+        dt = params.dt;
         tf = params.tf;
+        t0 = params.t0;
 
-        TU = tf./(8*N);
+        TU = (tf-t0)./(8*N);
         tunit_length = floor(TU./dt); % N° of time instants in 1 time unit
         
         % Build signal_unit
-        timeaxis = linspace(0, 8*TU, tunit_length);
+%         timeaxis = linspace(0, 8*TU, tunit_length);
 
         % No input up to 1 TU
         signal_unit(1:tunit_length) = 0; %zeros(tunit_length, 1);
@@ -118,19 +127,23 @@ switch signal_type
         if nargout > 1
             timevec = linspace(0, (8*N+1)*TU, length(signal));
         end
-        signal = signal.*0.75;
+
+        timevec = timevec + t0;
+        timevec = timevec(timevec <= tf);
+        signal = signal(timevec <= tf).*0.75;
+
 
     case 5 % Doublet
 
         N = params.N;
-        dt = 1/500;
+        dt = params.dt;
         tf = params.tf;
 
         TU = tf./(3*N);
         tunit_length = floor(TU./dt); % N° of time instants in 1 time unit
         
         % Build signal_unit
-        timeaxis = linspace(0, 3*TU, tunit_length);
+%         timeaxis = linspace(0, 3*TU, tunit_length);
 
         % No input up to 1 TU
         signal_unit(1:tunit_length) = 0; %zeros(tunit_length, 1);
@@ -153,6 +166,8 @@ switch signal_type
         if nargout > 1
             timevec = linspace(0, (3*N+1)*TU, length(signal));
         end
+
+        signal = signal.*0.75;
 
 
 end
