@@ -1,7 +1,8 @@
 % Optimization of the experiment for better model identification
 theta0 = th_true.*[1.2 1.1 0.8 1.1 0.7 1.1];
+% theta0 = -rand(1, 6).*th_true;
 
-comb = 4;
+comb = 1;
 
 switch comb
     case 1 % Linear Sine Sweep + RBS
@@ -94,10 +95,9 @@ end
 % x0 = [8,295,20];
 metric_selector = 1;
 
-J = IdentificationExperiment(x0, theta0, signal_type, metric_selector);
+J = IdentificationExperiment(x0, theta0, signal_type, metric_selector, 1);
 disp("Initial J cost: " + num2str(J));
 
-return
 
 % Set-up options
 fmincon_opts = optimoptions("fmincon", "Algorithm", 'interior-point',...
@@ -105,20 +105,28 @@ fmincon_opts = optimoptions("fmincon", "Algorithm", 'interior-point',...
        'UseParallel', false, 'Display', 'iter', 'OptimalityTolerance', 1e-6);
 
 ga_opts = optimoptions("ga", "Display", 'iter', 'CrossoverFraction', 0.7, ...
-    'FunctionTolerance', 1e-4, 'MaxTime', 10*60, 'PopulationSize', 100, 'UseParallel', false);
+    'FunctionTolerance', 1e-4, 'MaxTime', 5*3600, 'PopulationSize', 100, 'UseParallel', false);
 
 % Run optimization
 % [optimal_input, ] = fmincon(@(x) IdentificationExperiment(x, theta0,...
-%     metric_selector), x0, [], [], [], [], LB, UB, [], fmincon_opts);
+%     metric_selector, 0), x0, [], [], [], [], LB, UB, [], fmincon_opts);
 
 % 3211 [8.173686814228478,2.521058987690398e+02,20.019986773376180]
 
-[optimal_input, ] = ga(@(x) IdentificationExperiment(x, theta0,...
-    metric_selector), length(LB), [], [], [], [], LB, UB, [], [], ga_opts);
+[optimal_input, ] = ga(@(x) IdentificationExperiment(x, theta0, signal_type,...
+    metric_selector, 0), length(LB), [], [], [], [], LB, UB, [], [], ga_opts);
 
+[optimal_input2, ] = fmincon(@(x) IdentificationExperiment(x, theta0, signal_type,...
+    metric_selector, 0), optimal_input, [], [], [], [], LB, UB, [], fmincon_opts);
+
+save('comb1_gafmincon.mat');
+return
+
+
+%%
 
 x = [8.173686814228478,2.521058987690398e+02,20.019986773376180];
-
+comb = 3
 % Unpack parameters
 switch comb
 

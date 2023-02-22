@@ -73,15 +73,15 @@ switch method
             'Frequency', faxis(id_f), 'FrequencyUnit', 'Hz');
 
         % Guess parameters vector
+        %         theta0 = (-ones(1, 6).^(round(rand(1, 6)))).*randi(133, 1, 6).*th_true;
         theta0 = th_true.*[1.2 1.1 0.8 1.1 0.7 1.1];
+        %         theta0 = th_true;
 
         % Generate initial guess for greyest function
         model_fun = 'LongDyn_ODE';
-        [fitmodel, theta, est_unc] = greyest_wrapper(data_to_fit, model_fun, theta0);
-
+        [fitmodel, theta, est_unc] = greyest_wrapper(data_to_fit, model_fun, theta0, 1);
         
     case 1
-
 
         % Call script to estimate FRF of the system by K-W Theory (PSD)
         EstimateFRF; % Output: H_est, faxis_masked
@@ -93,8 +93,8 @@ switch method
 
         % Guess parameters vector
         theta0 = th_true.*[1.2 1.1 0.8 1.1 0.7 1.1];
-  
 
+   
         switch optim_method
             case 0
 
@@ -107,7 +107,7 @@ switch method
 
                 % Generate initial guess for greyest function
                 model_fun = 'LongDyn_ODE';
-                [fitmodel, theta, est_unc] = greyest_wrapper(data_to_fit, model_fun, theta0);
+                [fitmodel, theta, est_unc] = greyest_wrapper(data_to_fit, model_fun, theta0, 1);
 
             case 1
 
@@ -413,6 +413,8 @@ fprintf("Error: %4.4f\n", est_err);
 %     [eigvec, eigval] = eig(Cth);
 % end
 
+% Simone did: trace of standard deviation (relative) 
+
 % Alternatives for uncertainty assessment
 % 1) From greyest --> uncertainty in terms of relative std. dev. of the
 % parameters
@@ -445,8 +447,11 @@ w_axis = 2*pi*faxis_masked; % Frequency axis in rad/s
 % Transfer function FRF of the identified model
 [mag_a, phase_a, w_out] = bode(TF_model);
 % Evaluate FRF starting from measurement data with MATLAB function
-TF_spafdr = spafdr(iddata([q_data, ax_data], delta_data, sample_time, 'Frequency', faxis(id_f), 'FrequencyUnit', 'Hz'));
+TF_spafdr = spafdr(iddata([q_data, ax_data], delta_data, sample_time, 'Frequency', 2*pi*faxis(id_f), 'FrequencyUnit', 'rad/s'));
 [mag_b, phase_b] = bode(TF_spafdr, w_out);
+
+phase_a = wrapTo180(phase_a);
+phase_b = wrapTo180(phase_b);
 
 % NOTE: 20 or 10 to convert H in log scale --> check what bode() uses
 legend_cell = {'greyest model', 'spafdr', 'KW estimator', '', ''};
@@ -458,7 +463,7 @@ subplot(2, 1, 1);
 hold on;
 semilogx(w_out, squeeze(mag_a(1, 1, :)), '-', 'LineWidth', 1.05, 'DisplayName', 'greyest model');
 semilogx(w_out, squeeze(mag_b(1, 1, :)), '-', 'LineWidth', 1.05, 'DisplayName', 'spafdr');
-semilogx(w_axis, 20*log10(abs(H_est(:, 1))), '-', 'LineWidth', 1.05, 'DisplayName', 'KW estimator');
+semilogx(w_axis(w_axis <= w_out(end)), 10*log10(abs(H_est((w_axis <= w_out(end)), 1))), '-', 'LineWidth', 1.05, 'DisplayName', 'KW estimator');
 grid minor
 axis auto;
 
@@ -480,7 +485,7 @@ subplot(2, 1, 2);
 hold on;
 semilogx(w_out, (squeeze(phase_a(id, 1, :))), '-', 'LineWidth', 1.05, 'DisplayName', 'greyest model');
 semilogx(w_out, (squeeze(phase_b(id, 1, :))), '-', 'LineWidth', 1.05, 'DisplayName', 'spafdr');
-semilogx(w_axis, rad2deg(angle(H_est(:, id))), '-', 'LineWidth', 1.05, 'DisplayName', 'KW estimator');
+semilogx(w_axis(w_axis <= w_out(end)), rad2deg(angle(H_est((w_axis <= w_out(end)), id))), '-', 'LineWidth', 1.05, 'DisplayName', 'KW estimator');
 yline(-180, 'k--', 'DisplayName', '');
 yline(+180, 'k--', 'DisplayName', '');
 grid minor
@@ -500,6 +505,14 @@ legend(legend_cell);
 
 hold off;
 
+% Fitting index computation
+% NOTE: compare uses FIT metric
+figure;
+compare(data_to_fit, fitmodel);
+grid minor;
+axis auto;
+title('Evaluation of goodness of fit from greyest identified model');
+
 % TF: delta --> ax
 id = 2;
 figure;
@@ -508,7 +521,7 @@ subplot(2, 1, 1);
 hold on;
 semilogx(w_out, squeeze(mag_a(id, 1, :)), '-', 'LineWidth', 1.05, 'DisplayName', 'greyest model');
 semilogx(w_out, squeeze(mag_b(id, 1, :)), '-', 'LineWidth', 1.05, 'DisplayName', 'spafdr');
-semilogx(w_axis, 20*log10(abs(H_est(:, id))), '-', 'LineWidth', 1.05, 'DisplayName', 'KW estimator');
+semilogx(w_axis(w_axis <= w_out(end)), 10*log10(abs(H_est((w_axis <= w_out(end)), 1))), '-', 'LineWidth', 1.05, 'DisplayName', 'KW estimator');
 grid minor;
 axis auto;
 
@@ -530,7 +543,7 @@ subplot(2, 1, 2);
 hold on;
 semilogx(w_out, (squeeze(phase_a(id, 1, :))), '-', 'LineWidth', 1.05, 'DisplayName', 'greyest model');
 semilogx(w_out, (squeeze(phase_b(id, 1, :))), '-', 'LineWidth', 1.05, 'DisplayName', 'spafdr');
-semilogx(w_axis, rad2deg(angle(H_est(:, id))), '-', 'LineWidth', 1.05, 'DisplayName', 'KW estimator');
+semilogx(w_axis(w_axis <= w_out(end)), rad2deg(angle(H_est((w_axis <= w_out(end)), id))), '-', 'LineWidth', 1.05, 'DisplayName', 'KW estimator');
 yline(-180, 'k--');
 yline(+180, 'k--');
 grid minor;
@@ -582,7 +595,10 @@ for i = 1:2
     ax.YMinorTick = 'on';
     ax.LineWidth = 1.05;
 end
-title('Poles/Zeros of $H_{\delta a_x}$ with 3$\sigma$ confidence interval')
+title('Poles/Zeros of $H_{\delta a_x}$ with 3$\sigma$ confidence interval');
+
+
+
 
 % 4) MCM to sample uncertainty space and get corresponding FRF
 % Assume Gaussian distribution

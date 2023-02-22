@@ -9,10 +9,10 @@ end
 
 tf_mid = tfrac * params.tf;
 counter = 1;
-N_instants = ceil(params.tf - params.t0)/params.dt;
+N_instants = ceil(params.tf - params.t0/params.dt);
 
-timevec = nan(1.1*N_instants, 1);
-signal = nan(1.1*N_instants, 1);
+timevec = nan(N_instants, 1);
+signal = nan(N_instants, 1);
 
 % Allocation indexes
 idfirst = 1;

@@ -119,14 +119,15 @@ end
 %% Signals Pre-Processing
 N_delay = 1;
 
+time_grid = output.time_grid;
 Excit_signal = output.Excit_signal;
-RemoveZeroInputMask = Excit_signal ~= 0;
+CutInputMask = time_grid >= 23 & time_grid <= 100;
 
 % Extract useful input/output samples 
-Mtot = output.Mtot(RemoveZeroInputMask);
-time_grid = output.time_grid(RemoveZeroInputMask);
-ax = output.ax(RemoveZeroInputMask);
-q = output.q(RemoveZeroInputMask);
+Mtot = output.Mtot(CutInputMask);
+ax = output.ax(CutInputMask);
+q = output.q(CutInputMask);
+time_grid = time_grid(CutInputMask);
 
 % dt = 1/250; % 250 Hz, defined in parameters_controller
 time_grid = time_grid((1+N_delay):end);

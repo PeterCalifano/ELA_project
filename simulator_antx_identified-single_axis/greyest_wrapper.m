@@ -1,4 +1,4 @@
-function [fitmodel, est_params, est_unc] = greyest_wrapper(data_to_fit, model_fun, theta0)
+function [fitmodel, est_params, est_unc] = greyest_wrapper(data_to_fit, model_fun, theta0, display_flag)
 %% PROTOTYPE
 % -------------------------------------------------------------------------------------------------------------
 %% DESCRIPTION
@@ -47,9 +47,13 @@ fcn_type = 'c';
 % data = frd(freqdata, faxis_masked);
 % Create grey model for identification
 greyobj = idgrey(model_fun, parameters, fcn_type);
-% Set grey identification options
-greyopt = greyestOptions('Display', 'off');
 
+% Set grey identification options
+if display_flag == 1
+    greyopt = greyestOptions('Display', 'on');
+else
+    greyopt = greyestOptions('Display', 'off');
+end
 % Identify model parameters with MATLAB Built-In function greyest()
 [fitmodel, ~] = greyest(data_to_fit, greyobj, greyopt);
 [est_params, est_unc] = getpvec(fitmodel);

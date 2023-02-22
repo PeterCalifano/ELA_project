@@ -108,6 +108,7 @@ for k = 1:K
     G_aa_rough{k} = (2/T_win)*abs(Y_ax{k}).^2 ;
     G_qq_rough{k} = (2/T_win)*abs(Y_q{k}).^2;
     G_dd_rough{k} = (2/T_win)*abs(X_d{k}).^2;
+
     G_da_rough{k} = (2/T_win)* (conj(X_d{k}).*Y_ax{k});
     G_dq_rough{k} = (2/T_win)* (conj(X_d{k}).*Y_q{k});
 

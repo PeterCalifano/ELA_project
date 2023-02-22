@@ -1,4 +1,4 @@
-function J = IdentificationExperiment(x, theta0, signal_type, metric_selector)
+function J = IdentificationExperiment(x, theta0, signal_type, metric_selector, display_flag)
 
 % Load input (reference) model
 load('input_workspace.mat')
@@ -10,13 +10,13 @@ K = x(1);
 tf = x(2);
 params.beta = 1.015;
 f0 = x(3);
-% ff = x(4);
+ff = x(4);
 
 % Generate Input
 params.t0 = t0;
 params.tf = tf;
 params.dt = sample_time;
-% params.ff = ff;
+params.ff = ff;
 params.f0 = f0;
 
 %% 
@@ -25,13 +25,13 @@ if length(signal_type) > 1 || signal_type == 3 || signal_type == 4 ...
     || signal_type == 5
     switch signal_type(end)
         case 3
-            T = x(3);
+            T = x(5);
             params.T = T;
         case 4
-            N = x(3);
+            N = x(5);
             params.N = N;
         case 5
-            N = x(3);
+            N = x(5);
             params.N = N;
     end
 end
@@ -48,13 +48,17 @@ sim_object = Simulink.SimulationInput(model_name);
 sim_object = setVariable(sim_object, 'ExcitationM', ExcitationM);
 sim_object = sim_object.setModelParameter('StopTime', num2str(simulation_time));
 
-output = sim(sim_object);
+try
+    output = sim(sim_object);
+catch
+    J = 1e10;
+    return;
+end
 
 % Signals Pre-Processing
 N_delay = 1;
 
-Excit_signal = output.Excit_signal;
-% RemoveZeroInputMask = Excit_signal ~= 0;
+% Excit_signal = output.Excit_signal;
 
 % Extract useful input/output samples
 Mtot = output.Mtot;
@@ -83,12 +87,13 @@ Window = hanning(floor(N_T/K));
 [cohr1, f1] = mscohere(delta_zm, q_zm, Window, [], [], 1/sample_time); % f1 is in Hz
 [cohr2, ~] = mscohere(delta_zm, ax_zm, Window, [], [], 1/sample_time);
 
-f_window = f1(cohr1 > 0.6 & cohr2 > 0.6);
+f_window = f1(cohr1 >= 0.6 & cohr2 >= 0.6);
 % Define data structure for greyest
 data_time = iddata([q_zm, ax_zm], delta_zm, sample_time);
 % Transform to frequency domain
 data = fft(data_time); % frequency in rad/s
 
+% CHECK FREQUENCY AXIS and if FFT IS ONE OR TWO SIDED
 q_f = data.OutputData(:, 1);
 ax_f = data.OutputData(:, 2);
 delta_f = data.InputData;
@@ -112,17 +117,17 @@ data_to_fit = iddata([q_data, ax_data], delta_data, sample_time,...
 
 % Generate initial guess for greyest function
 model_fun = 'LongDyn_ODE';
-[~, est_params, est_unc] = greyest_wrapper(data_to_fit, model_fun, theta0);
+[~, est_params, est_unc] = greyest_wrapper(data_to_fit, model_fun, theta0, display_flag);
 
 % Compute Objective function Cost
 
 switch metric_selector
     case 1
-        J = sum(est_unc);
+        J = sum(est_unc.^2);
     case 2
-        J = max(est_unc);
+        J = max(est_unc.^2);
     case 3
-        J = det(diag(est_unc));
+        J = det(diag(est_unc.^2));
     case 4
         J = sum(est_unc./est_params);
 end
