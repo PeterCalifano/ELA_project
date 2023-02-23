@@ -2,7 +2,7 @@
 theta0 = th_true.*[1.2 1.1 0.8 1.1 0.7 1.1];
 % theta0 = -rand(1, 6).*th_true;
 
-comb = 1;
+comb = 2;
 
 switch comb
     case 1 % Linear Sine Sweep + RBS
@@ -101,11 +101,12 @@ disp("Initial J cost: " + num2str(J));
 
 % Set-up options
 fmincon_opts = optimoptions("fmincon", "Algorithm", 'interior-point',...
-       'FunctionTolerance', 1e-5, 'MaxIterations', 10,...
-       'UseParallel', false, 'Display', 'iter', 'OptimalityTolerance', 1e-6);
+       'FunctionTolerance', 1e-5, 'MaxIterations', 15,...
+       'UseParallel', false, 'Display', 'iter',...
+       'OptimalityTolerance', 1e-10, 'ConstraintTolerance', 1e-10);
 
 ga_opts = optimoptions("ga", "Display", 'iter', 'CrossoverFraction', 0.7, ...
-    'FunctionTolerance', 1e-4, 'MaxTime', 3*3600, 'PopulationSize', 50, 'UseParallel', false);
+    'FunctionTolerance', 1e-4, 'MaxTime', 6*3600, 'PopulationSize', 50, 'UseParallel', false);
 
 % Run optimization
 % [optimal_input, ] = fmincon(@(x) IdentificationExperiment(x, theta0,...
@@ -116,11 +117,12 @@ ga_opts = optimoptions("ga", "Display", 'iter', 'CrossoverFraction', 0.7, ...
 [optimal_input, ] = ga(@(x) IdentificationExperiment(x, theta0, signal_type,...
     metric_selector, 0), length(LB), [], [], [], [], LB, UB, [], [], ga_opts);
 
+
 [optimal_input2, ] = fmincon(@(x) IdentificationExperiment(x, theta0, signal_type,...
     metric_selector, 0), optimal_input, [], [], [], [], LB, UB, [], fmincon_opts);
 
 
-save('comb1_gafmincon.mat');
+save('comb2_gafmincon.mat');
 
 return
 

@@ -50,6 +50,7 @@ try
     sim_object = Simulink.SimulationInput(model_name);
     sim_object = setVariable(sim_object, 'ExcitationM', ExcitationM);
     sim_object = sim_object.setModelParameter('StopTime', num2str(simulation_time));
+    sim_object = sim_object.setModelParameter('SimulationMode', 'accelerator');
 
     output = sim(sim_object);
     % Signals Pre-Processing
@@ -126,7 +127,8 @@ try
         case 3
             J = det(diag(est_unc.^2));
         case 4
-            J = sum(est_unc./est_params);
+            J = sum((est_unc./est_params).^2);
+       
     end
 
 catch
