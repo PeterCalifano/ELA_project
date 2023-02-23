@@ -105,7 +105,7 @@ fmincon_opts = optimoptions("fmincon", "Algorithm", 'interior-point',...
        'UseParallel', false, 'Display', 'iter', 'OptimalityTolerance', 1e-6);
 
 ga_opts = optimoptions("ga", "Display", 'iter', 'CrossoverFraction', 0.7, ...
-    'FunctionTolerance', 1e-4, 'MaxTime', 5*3600, 'PopulationSize', 100, 'UseParallel', false);
+    'FunctionTolerance', 1e-4, 'MaxTime', 5*3600, 'PopulationSize', 10, 'UseParallel', false);
 
 % Run optimization
 % [optimal_input, ] = fmincon(@(x) IdentificationExperiment(x, theta0,...
@@ -119,33 +119,39 @@ ga_opts = optimoptions("ga", "Display", 'iter', 'CrossoverFraction', 0.7, ...
 [optimal_input2, ] = fmincon(@(x) IdentificationExperiment(x, theta0, signal_type,...
     metric_selector, 0), optimal_input, [], [], [], [], LB, UB, [], fmincon_opts);
 
+
 save('comb1_gafmincon.mat');
+
 return
 
 
 %%
 
-x = [8.173686814228478,2.521058987690398e+02,20.019986773376180];
-comb = 3
+% x = [8.173686814228478,2.521058987690398e+02,20.019986773376180];
+% comb = 3
 % Unpack parameters
 switch comb
 
     case 1 % LSW + RBS
         t0 = 0;
-        K = optimal_input(1);
-        tfin = optimal_input(2);
-        f0 = optimal_input(3);
-        ff = optimal_input(4);
-        T = optimal_input(5);
+        K = optimal_input2(1);
+        tfin = optimal_input2(2);
+        f0 = optimal_input2(3);
+        ff = optimal_input2(4);
+        T = optimal_input2(5);
+
+        params.T = T;
 
     case 2 % LSW + 3211
 
         t0 = 0;
-        K = optimal_input(1);
-        tfin = optimal_input(2);
-        f0 = optimal_input(3);
-        ff = optimal_input(4);
-        N = optimal_input(5);
+        K = optimal_input2(1);
+        tfin = optimal_input2(2);
+        f0 = optimal_input2(3);
+        ff = optimal_input2(4);
+        N = optimal_input2(5);
+
+        params.N = N;
 
 end
 
@@ -158,12 +164,15 @@ end
 % params.tf = tf;
 % params.T = T;
 
-% params.t0 = t0;
+
+% Create params to test and retrieve theta vector
+params.ff = ff;
+params.f0 = f0;
+
+params.t0 = t0;
 params.tf = tfin;
-% params.dt = sample_time;
-% params.ff = ff;
-% params.f0 = f0;
-params.N = N;
+params.dt = sample_time;
+
 
 [signal, timevec] = GenerateInput(params, signal_type);
 ExcitationM = [timevec, signal];
@@ -183,7 +192,6 @@ output = sim(sim_object);
 N_delay = 1;
 
 Excit_signal = output.Excit_signal;
-% RemoveZeroInputMask = Excit_signal ~= 0;
 
 % Extract useful input/output samples
 Mtot = output.Mtot;
@@ -203,9 +211,212 @@ Nsamples = length(time_grid);
 
 IdentifyModel;
 
+fprintf("\nIdentified model parameters and relative 3-sigma uncertainty (Gaussian distr. assumption):" + ...
+    "\nXu = %3.3g\t 3sig\%: %3.3g" + ...
+    "\nMu = %3.3g\t 3sig\%: %3.3g" + ...
+    "\nXq = %3.3g\t 3sig\%: %3.3g" + ...
+    "\nMq = %3.3g\t 3sig\%: %3.3g" + ...
+    "\nXd = %3.3g\t 3sig\%: %3.3g" + ...
+    "\nMd = %3.3g\t 3sig\%: %3.3g", ...
+    theta(1), 100*abs(3*est_unc(1)./theta(1)), ...
+    theta(2), 100*abs(3*est_unc(2)./theta(2)), ...
+    theta(3), 100*abs(3*est_unc(3)./theta(3)), ...
+    theta(4), 100*abs(3*est_unc(4)./theta(4)), ...
+    theta(5), 100*abs(3*est_unc(5)./theta(5)), ...
+    theta(6), 100*abs(3*est_unc(6)./theta(6)));
+
+%% Identified model validation
+% Generate input signal for validation
+
+params.ff = 150;
+params.f0 = 0.001;
+
+params.t0 = 0;
+params.tf = 200;
+params.dt = 4e-3;
+
+[validation_signal, validation_timevec] = GenerateInput(params, 1);
+
+% [validation_signal, validation_timevec] = CombineInput();
+
+%% Simulate reference model
+load('input_workspace.mat')
+clear ExcitationM
+
+rng(1);
+
+ExcitationM = [validation_timevec, validation_signal];
+
+% Time grid
+t = ExcitationM(:, 1);
+simulation_time = t(end) - t(1);
+
+% Simulate system
+sim_object = Simulink.SimulationInput(model_name);
+sim_object = setVariable(sim_object, 'ExcitationM', ExcitationM);
+sim_object = sim_object.setModelParameter('StopTime', num2str(simulation_time));
+
+output = sim(sim_object);
+
+% Signals Pre-Processing
+N_delay = 1;
+
+[Mtot, ax, q, timegrid] = OutputPreProcess(output, 1);
+
+Mtot_cell{1, 1} = Mtot;
+ax_cell{1, 3} = ax;
+q_cell{1, 2} = q;
+time_grid_cell{1, 4} = timegrid;
+
+%% Simulate identified model with Task1 input
+load('input_workspace.mat')
+clear ExcitationM
+
+% Hard-coded parameters vector
+theta = [-2.464780033101573e-01;
+     1.322467636559020e-01;
+    -5.331283778077723e+00;
+    -3.017675910479900e+00;
+    -6.624738689764718e+00;
+     4.570041745162848e+02];
+
+rng(1);
+
+ExcitationM = [validation_timevec, validation_signal];
+
+sim_object = SetModel(theta, ExcitationM);
+
+output = sim(sim_object);
+
+% Signals Pre-Processing
+N_delay = 1;
+
+[Mtot_cell{2, 1}, ax_cell{2, 3}, q_cell{2, 2}, time_grid_cell{2, 4}] = OutputPreProcess(output, 1);
+
+%% Simulate identified model with optimized input
+load('input_workspace.mat')
+clear ExcitationM
+
+% Hard-coded parameters vector
+theta = th_true.*0.001;
+
+rng(1);
+
+ExcitationM = [validation_timevec, validation_signal];
+
+sim_object = SetModel(theta, ExcitationM);
+
+output = sim(sim_object);
+
+% Signals Pre-Processing
+N_delay = 1;
+
+[Mtot_cell{3, 1}, ax_cell{3, 3}, q_cell{3, 2}, time_grid_cell{3, 4}] = OutputPreProcess(output, 1);
 
 
-% Prototype objective function:
-% x: [Nx1] decision variables
+% Evaluate time-domain errors with respect to reference
+% Ideally: zero mean signal with random noise due to 
+% Either time "error" signal in logarithmic scale, use compare.
+for i = 2:3
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    output_error{i-1, 1} = q_cell{i, 2} - q_cell{1, 2};
+    output_error{i-1, 2} = ax_cell{i, 3} - ax_cell{1, 3};
+
+end
+
+% Pitch rate
+figure;
+subplot(2, 1, 1)
+plot(q_cell{1, 3}, '-', 'DisplayName', 'Reference');
+plot(q_cell{2, 3}, '-', 'DisplayName', 'Task1');
+plot(q_cell{3, 3}, '-', 'DisplayName', 'Task2');
+title('Pitch rate output - Time domain');
+
+subplot(2, 1, 2)
+plot(output_error{1, 1}, '-', 'DisplayName', 'Task1');
+plot(output_error{2, 1}, '-', 'DisplayName', 'Task2');
+title('Pitch rate errors - Time domain');
+
+% Acceleration
+figure;
+subplot(2, 1, 1)
+plot(ax_cell{1, 3}, '-', 'DisplayName', 'Reference');
+plot(ax_cell{2, 3}, '-', 'DisplayName', 'Task1');
+plot(ax_cell{3, 3}, '-', 'DisplayName', 'Task2');
+title('Acceleration output - Time domain');
+
+subplot(2, 1, 2)
+plot(output_error{1, 2}, '-', 'DisplayName', 'Task1');
+plot(output_error{2, 2}, '-', 'DisplayName', 'Task2');
+title('Acceleration errors - Time domain');
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+function [Mtot, ax, q, time_grid] = OutputPreProcess(output, N_delay)
+
+% Extract useful input/output samples
+Mtot = output.Mtot;
+time_grid = output.time_grid;
+ax = output.ax;
+q = output.q;
+
+% dt = 1/250; % 250 Hz, defined in parameters_controller
+time_grid = time_grid((1+N_delay):end);
+% Consider delay of the output (4 samples)
+Mtot = Mtot(1:(end-N_delay));
+ax = ax((1+N_delay):end);
+q = q((1+N_delay):end);
+end
+
+function sim_object = SetModel(theta, ExcitationM)
+
+model_name = 'Simulator_Single_Axis';
+% Time grid
+t = ExcitationM(:, 1);
+simulation_time = t(end) - t(1);
+
+% Simulate system
+
+% [A, B, C, D] = LongDyn_ODE(theta(1), theta(2), theta(3), theta(4), theta(5), theta(6));
+
+Xu = theta(1);
+Mu = theta(2);
+Xq = theta(3);
+Mq = theta(4);
+Xd = theta(5);
+Md = theta(6);
+
+A = [Xu, Xq, -9.81; 
+    Mu, Mq, 0; 
+    0, 1, 0];
+
+B = [Xd; 
+    Md; 
+    0];
+
+% Output: u, q, theta, ax
+C = [1, 0, 0; 
+    0, 1, 0; 
+    0, 0, 1; 
+    Xu, Xq, 0]; 
+
+D = [0; 
+    0;
+    0; 
+    Xd];
+
+sim_object = Simulink.SimulationInput(model_name);
+sim_object = setVariable(sim_object, 'ExcitationM', ExcitationM);
+sim_object = sim_object.setModelParameter('StopTime', num2str(simulation_time));
+
+
+sim_object = setVariable(sim_object, 'A', A);
+sim_object = setVariable(sim_object, 'B', B);
+sim_object = setVariable(sim_object, 'C', C);
+sim_object = setVariable(sim_object, 'D', D);
+
+
+end
+
+
+
+

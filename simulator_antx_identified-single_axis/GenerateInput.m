@@ -85,7 +85,7 @@ switch signal_type
         end
 
         timevec = timevec + t0;
-        signal = signal.*0.6;
+        signal = signal.* 0.5;
 
     case 4 % 3211 sequence
 %         t0 = params.t0;
@@ -136,6 +136,7 @@ switch signal_type
     case 5 % Doublet
 
         N = params.N;
+        N = round(N);
         dt = params.dt;
         tf = params.tf;
 

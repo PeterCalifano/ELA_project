@@ -131,7 +131,7 @@ time_grid = time_grid(CutInputMask);
 
 % dt = 1/250; % 250 Hz, defined in parameters_controller
 time_grid = time_grid((1+N_delay):end);
-% Consider delay of the output (4 samples)
+% Consider delay of the output (1 samples)
 Mtot = Mtot(1:(end-N_delay));
 ax = ax((1+N_delay):end);
 q = q((1+N_delay):end);
@@ -173,9 +173,9 @@ q = q((1+N_delay):end);
 % Call script for Model Identification
 
 
-% IdentifyModel;
+IdentifyModel;
 
-OptimizeIdentification;
+% OptimizeIdentification;
 
 
 %% END OF CODE
