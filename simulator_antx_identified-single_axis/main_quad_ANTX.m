@@ -173,9 +173,9 @@ q = q((1+N_delay):end);
 % Call script for Model Identification
 
 
-IdentifyModel;
+% IdentifyModel;
 
-% OptimizeIdentification;
+OptimizeIdentification;
 
 
 %% END OF CODE

@@ -21,7 +21,7 @@ params.f0 = f0;
 
 %%
 
-if length(signal_type) > 1 && (signal_type == 3 || signal_type == 4 ...
+if length(signal_type) > 1 || (signal_type == 3 || signal_type == 4 ...
         || signal_type == 5)
     switch signal_type(end)
         case 3

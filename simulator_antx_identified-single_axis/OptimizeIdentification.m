@@ -105,7 +105,7 @@ fmincon_opts = optimoptions("fmincon", "Algorithm", 'interior-point',...
        'UseParallel', false, 'Display', 'iter', 'OptimalityTolerance', 1e-6);
 
 ga_opts = optimoptions("ga", "Display", 'iter', 'CrossoverFraction', 0.7, ...
-    'FunctionTolerance', 1e-4, 'MaxTime', 5*3600, 'PopulationSize', 10, 'UseParallel', false);
+    'FunctionTolerance', 1e-4, 'MaxTime', 3*3600, 'PopulationSize', 50, 'UseParallel', false);
 
 % Run optimization
 % [optimal_input, ] = fmincon(@(x) IdentificationExperiment(x, theta0,...
@@ -228,7 +228,7 @@ fprintf("\nIdentified model parameters and relative 3-sigma uncertainty (Gaussia
 %% Identified model validation
 % Generate input signal for validation
 
-params.ff = 150;
+params.ff = 100;
 params.f0 = 0.001;
 
 params.t0 = 0;
@@ -236,11 +236,12 @@ params.tf = 200;
 params.dt = 4e-3;
 
 [validation_signal, validation_timevec] = GenerateInput(params, 1);
-
+validation_signal = validation_signal.*0.9;
 % [validation_signal, validation_timevec] = CombineInput();
 
 %% Simulate reference model
 load('input_workspace.mat')
+decimation = 1;
 clear ExcitationM
 
 rng(1);
@@ -263,10 +264,10 @@ N_delay = 1;
 
 [Mtot, ax, q, timegrid] = OutputPreProcess(output, 1);
 
-Mtot_cell{1, 1} = Mtot;
-ax_cell{1, 3} = ax;
-q_cell{1, 2} = q;
-time_grid_cell{1, 4} = timegrid;
+Mtot_cell{1} = Mtot;
+ax_cell{1} = ax;
+q_cell{1} = q;
+time_grid_cell{1} = timegrid;
 
 %% Simulate identified model with Task1 input
 load('input_workspace.mat')
@@ -291,7 +292,7 @@ output = sim(sim_object);
 % Signals Pre-Processing
 N_delay = 1;
 
-[Mtot_cell{2, 1}, ax_cell{2, 3}, q_cell{2, 2}, time_grid_cell{2, 4}] = OutputPreProcess(output, 1);
+[Mtot_cell{2}, ax_cell{2}, q_cell{2}, time_grid_cell{2}] = OutputPreProcess(output, 1);
 
 %% Simulate identified model with optimized input
 load('input_workspace.mat')
@@ -311,44 +312,59 @@ output = sim(sim_object);
 % Signals Pre-Processing
 N_delay = 1;
 
-[Mtot_cell{3, 1}, ax_cell{3, 3}, q_cell{3, 2}, time_grid_cell{3, 4}] = OutputPreProcess(output, 1);
+[Mtot_cell{3}, ax_cell{3}, q_cell{3}, time_grid_cell{3}] = OutputPreProcess(output, 1);
 
 
 % Evaluate time-domain errors with respect to reference
 % Ideally: zero mean signal with random noise due to 
 % Either time "error" signal in logarithmic scale, use compare.
 for i = 2:3
-
-    output_error{i-1, 1} = q_cell{i, 2} - q_cell{1, 2};
-    output_error{i-1, 2} = ax_cell{i, 3} - ax_cell{1, 3};
-
+    output_error{i-1, 1} = q_cell{i} - q_cell{1};
+    output_error{i-1, 2} = ax_cell{i} - ax_cell{1};
 end
 
+%% Plots
 % Pitch rate
 figure;
 subplot(2, 1, 1)
-plot(q_cell{1, 3}, '-', 'DisplayName', 'Reference');
-plot(q_cell{2, 3}, '-', 'DisplayName', 'Task1');
-plot(q_cell{3, 3}, '-', 'DisplayName', 'Task2');
+hold on;
+plot(time_grid_cell{1}, q_cell{1}, '-', 'Linewidth', 1.02, 'DisplayName', 'Reference');
+plot(time_grid_cell{2}, q_cell{2}, '-', 'Linewidth', 1.02, 'DisplayName', 'Task1');
+plot(time_grid_cell{3}, q_cell{3}, '-', 'Linewidth', 1.02, 'DisplayName', 'Task2');
 title('Pitch rate output - Time domain');
+grid minor
+axis auto;
+legend();
 
 subplot(2, 1, 2)
-plot(output_error{1, 1}, '-', 'DisplayName', 'Task1');
-plot(output_error{2, 1}, '-', 'DisplayName', 'Task2');
+hold on;
+plot(time_grid_cell{2}, output_error{1, 1}, '-', 'Linewidth', 1.02, 'DisplayName', 'Task1');
+plot(time_grid_cell{3}, output_error{2, 1}, '-',  'Linewidth', 1.02, 'DisplayName', 'Task2');
 title('Pitch rate errors - Time domain');
+grid minor
+axis auto;
+legend();
 
 % Acceleration
 figure;
 subplot(2, 1, 1)
-plot(ax_cell{1, 3}, '-', 'DisplayName', 'Reference');
-plot(ax_cell{2, 3}, '-', 'DisplayName', 'Task1');
-plot(ax_cell{3, 3}, '-', 'DisplayName', 'Task2');
+hold on;
+plot(time_grid_cell{1}, ax_cell{1}, '-', 'Linewidth', 1.02, 'DisplayName', 'Reference');
+plot(time_grid_cell{2}, ax_cell{2}, '-', 'Linewidth', 1.02, 'DisplayName', 'Task1');
+plot(time_grid_cell{3}, ax_cell{3}, '-', 'Linewidth', 1.02, 'DisplayName', 'Task2');
 title('Acceleration output - Time domain');
+grid minor
+axis auto;
+legend();
 
 subplot(2, 1, 2)
-plot(output_error{1, 2}, '-', 'DisplayName', 'Task1');
-plot(output_error{2, 2}, '-', 'DisplayName', 'Task2');
+hold on;
+plot(time_grid_cell{2}, output_error{1, 2}, '-', 'Linewidth', 1.02, 'DisplayName', 'Task1');
+plot(time_grid_cell{2}, output_error{2, 2}, '-', 'Linewidth', 1.02, 'DisplayName', 'Task2');
 title('Acceleration errors - Time domain');
+grid minor
+axis auto;
+legend();
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 function [Mtot, ax, q, time_grid] = OutputPreProcess(output, N_delay)
