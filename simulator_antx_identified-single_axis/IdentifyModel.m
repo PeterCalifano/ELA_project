@@ -51,7 +51,7 @@ switch method
         q_f = data.OutputData(:, 1);
         ax_f = data.OutputData(:, 2);
         delta_f = data.InputData;
-        faxis = data.Frequency ./ (2*pi);
+        faxis = data.Frequency./(2*pi);
 
         figure;
         semilogy(faxis, abs(delta_f), 'k-', 'LineWidth', 1.01)

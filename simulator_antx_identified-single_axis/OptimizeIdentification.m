@@ -231,15 +231,15 @@ fprintf("\nIdentified model parameters and relative 3-sigma uncertainty (Gaussia
 %% Identified model validation
 % Generate input signal for validation
 
-params.ff = 100;
+params.ff = 3;
 params.f0 = 0.001;
 
 params.t0 = 0;
-params.tf = 200;
+params.tf = 100;
 params.dt = 4e-3;
 
 [validation_signal, validation_timevec] = GenerateInput(params, 1);
-validation_signal = validation_signal.*0.9;
+validation_signal = validation_signal;
 % [validation_signal, validation_timevec] = CombineInput();
 
 %% Simulate reference model
