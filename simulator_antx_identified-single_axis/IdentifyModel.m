@@ -1,10 +1,10 @@
 %% Options
 
 % 0: MATLAB greyest, 1: K-W for PSD --> optim_method
-method = 0;
+method = 1;
 
 % 0: MATLAB greyest or 1: Newton-Raphson
-optim_method = 0;
+optim_method = 1;
 
 Nsamples = length(time_grid);
 

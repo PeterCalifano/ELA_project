@@ -1,4 +1,4 @@
-function J = IdentificationExperiment(x, theta0, signal_type, metric_selector, display_flag)
+function [J, fitmodel, est_params, est_unc] = IdentificationExperiment(x, theta0, signal_type, metric_selector, display_flag)
 
 % Load input (reference) model
 load('input_workspace.mat')
@@ -115,7 +115,7 @@ try
 
     % Generate initial guess for greyest function
     model_fun = 'LongDyn_ODE';
-    [~, est_params, est_unc] = greyest_wrapper(data_to_fit, model_fun, theta0, display_flag);
+    [fitmodel, est_params, est_unc] = greyest_wrapper(data_to_fit, model_fun, theta0, display_flag);
 
     % Compute Objective function Cost
 
