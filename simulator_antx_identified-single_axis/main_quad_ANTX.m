@@ -112,7 +112,7 @@ save('simout.mat', "output");
 
 %% Delete temporary files
 
-if exist('slprj','dir')
+if exist('/slprj', 'dir')
     rmdir('slprj', 's')                                                    
 end
 
@@ -175,6 +175,7 @@ q = q((1+N_delay):end);
 
 IdentifyModel;
 
+% clear;
 % OptimizeIdentification;
 
 

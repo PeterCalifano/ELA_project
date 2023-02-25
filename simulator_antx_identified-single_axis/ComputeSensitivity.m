@@ -36,7 +36,8 @@ for idp = 1:Nparam
     th_perturbation = zeros(1, length(params));
     th_perturbation(idp) = dth;
     % Determine pertubed theta
-    theta = params + th_perturbation;
+    theta_plus = params + th_perturbation;
+    theta_minus = params - th_perturbation;
 %     gfreq = squeeze(freqresp(Hmodelstruct(theta), freq));
 
 %     g1re = real(gfreq(1, :));
@@ -48,8 +49,9 @@ for idp = 1:Nparam
     % "Measurements" vector
 %     yH_pert = [g1re, g1im, g2re, g2im]';
 
-    yH_pert = evalFreqR(Hmodelstruct(theta), freq, 'Hz');
-    dFRFdth{idp} = reshape((yH_pert - TFfreqresp)./dth, length(freq), []);
+    yH_pert_plus = evalFreqR(Hmodelstruct(theta_plus), freq, 'Hz');
+    yH_pert_minus = evalFreqR(Hmodelstruct(theta_minus), freq, 'Hz');
+    dFRFdth{idp} = reshape((yH_pert_plus - yH_pert_minus)./dth, length(freq), []);
 %     fprintf("\nSensitivity of TF1 Re to th%2d: %3.3g \n", idp, mean(dFRFdth{idp}(:, 1)));
 %     fprintf("Sensitivity of TF1 Im to th%2d: %3.3g \n", idp, mean(dFRFdth{idp}(:, 2)));
 %     fprintf("Sensitivity of TF2 Re to th%2d: %3.3g \n", idp, mean(dFRFdth{idp}(:, 3)));

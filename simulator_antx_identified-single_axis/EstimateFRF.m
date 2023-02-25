@@ -160,7 +160,7 @@ ax.LineWidth = 1.04;
 hold off;
 
 % Select frequency ranges to use for Identification model
-gamma2_thr = 0.7;
+gamma2_thr = 0.8;
 % Create Bool Mask
 MaskFreq = gamma2_dq >= gamma2_thr & gamma2_da >= gamma2_thr;
 % Extrac useful frequency points

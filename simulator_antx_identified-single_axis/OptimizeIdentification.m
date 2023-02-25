@@ -21,10 +21,10 @@ switch comb
         % Pameters: 1) K, 2) tf, 3) f0, 4) ff, 5) N
 
         % Initial guess for optimization
-        x0 = [8, 295, 0.05, 20, 6];
+        x0 = [8, 200, 0.05, 10, 6];
 
-        LB = [5, 1*60, 0.001, 1, 1];
-        UB = [40, 5*60, 0.2, 150, 20];
+        LB = [5, 1*60, 0, 0.8, 1];
+        UB = [50, 5*60, 0.05, 50, 20];
         signal_type = [1, 4];
 
     case 3 % Sine Sweep 
@@ -59,7 +59,7 @@ switch comb
         % Initial guess for optimization
         x0 = [8, 295, 1];
 
-        LB = [5, 1*60, 0.01];
+        LB = [5, 1*60, 0.005];
         UB = [40, 5*60, 10];
 
         signal_type = 3;
@@ -107,7 +107,7 @@ fmincon_opts = optimoptions("fmincon", "Algorithm", 'interior-point',...
 
 ga_opts = optimoptions("ga", "Display", 'iter', 'CrossoverFraction', 0.7, ...
     'FunctionTolerance', 1e-4, 'MaxTime', 6*3600, 'PopulationSize', 50,...
-    'MaxStallGenerations', 10,'UseParallel', false);
+    'MaxStallGenerations', 15,'UseParallel', false);
 
 % Run optimization
 % [optimal_input, ] = fmincon(@(x) IdentificationExperiment(x, theta0,...
@@ -115,15 +115,15 @@ ga_opts = optimoptions("ga", "Display", 'iter', 'CrossoverFraction', 0.7, ...
 
 % 3211 [8.173686814228478,2.521058987690398e+02,20.019986773376180]
 
-[optimal_input, ] = ga(@(x) IdentificationExperiment(x, theta0, signal_type,...
+[optimal_input] = ga(@(x) IdentificationExperiment(x, theta0, signal_type,...
     metric_selector, 0), length(LB), [], [], [], [], LB, UB, [], [], ga_opts);
 
 
-[optimal_input2, ] = fmincon(@(x) IdentificationExperiment(x, theta0, signal_type,...
+[optimal_input2] = fmincon(@(x) IdentificationExperiment(x, theta0, signal_type,...
     metric_selector, 0), optimal_input, [], [], [], [], LB, UB, [], fmincon_opts);
 
 
-save('comb2_gafmincon.mat');
+save('comb2modified_best.mat');
 
 return
 

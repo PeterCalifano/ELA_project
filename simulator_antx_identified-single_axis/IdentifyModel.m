@@ -1,10 +1,10 @@
 %% Options
 
 % 0: MATLAB greyest, 1: K-W for PSD --> optim_method
-method = 1;
+method = 0;
 
 % 0: MATLAB greyest or 1: Newton-Raphson
-optim_method = 1;
+optim_method = 0;
 
 Nsamples = length(time_grid);
 
@@ -24,30 +24,47 @@ switch method
         K = 8;
         Window = hanning(floor(N/K));
 
+        % Cross-correlation of input and output signals in time-domain
+% TODO: % Make two axes graph, with frequency band identified with two
+        % lines
+
         [cohr1, f1] = mscohere(delta_zm, q_zm, Window, [], [], 1/sample_time); % f1 is in Hz
         [cohr2, ~] = mscohere(delta_zm, ax_zm, Window, [], [], 1/sample_time);
 
-        figure
-        subplot(2, 1, 1)
-        semilogx(f1(cohr1 > 0.6), cohr1(cohr1 > 0.6), '-', 'LineWidth', 1.05);
-        xlabel('Frequency [Hz]')
-        grid minor
-        title('Coherence $\delta$ --> $q$')
+        time_coherence = figure;
+        hold on;
 
-        subplot(2, 1, 2)
-        semilogx(f1(cohr2 > 0.6), cohr2(cohr2 > 0.6), '-', 'LineWidth', 1.05);
-        xlabel('Frequency [Hz]')
-        grid minor
-        title('Coherence $\delta$ --> $a_x$')
+        %         figure
+        %         subplot(2, 1, 1)
+        
+        semilogx(f1, cohr1, '-', 'LineWidth', 1.02);
+        %         xlabel('Frequency [Hz]')
+        %         grid minor
+        %         title('Coherence $\delta$-$q$')
+        %
+        %         subplot(2, 1, 2)
+
+        semilogx(f1, cohr2, '-', 'LineWidth', 1.02);
+        %         xlabel('Frequency [Hz]')
+        %         grid minor
+        %         title('Coherence $\delta$-$a_x$')
 
         f_window = f1(cohr1 > 0.6 & cohr2 > 0.6);
-        % f_window = f_window(f_window <= 11);
+        f_lb = f_window(1);
+        f_ub = f_window(end);
+
+        title('Coherence of Output and Input time series')
+        xlabel('Frequency [rad/s]')
+        ylabel('Coherence $|\gamma_{uy}|$')
+        yline(f_lb, 'k--', num2str(f_lb) + " Hz");
+        yline(f_ub, 'k--', num2str(f_ub) + " Hz");
+        legend('$\delta$-$q$', '$\delta$-$a_x$', '', '');
 
         % Define data structure for greyest
         data_time = iddata([q_zm, ax_zm], delta_zm, sample_time);
         % Transform to frequency domain
         data = fft(data_time); % frequency in rad/s
-        
+
         q_f = data.OutputData(:, 1);
         ax_f = data.OutputData(:, 2);
         delta_f = data.InputData;
@@ -55,14 +72,13 @@ switch method
 
         figure;
         semilogy(faxis, abs(delta_f), 'k-', 'LineWidth', 1.01)
-        xlabel('Frequency [Hz]')
-        ylabel('$|M(f)|$ [dB]')
+          xlabel('Frequency [Hz]')
+          ylabel('$|M(f)|$ [dB]')
         grid minor
         axis auto
         title('Input signal - Frequency spectrum')
 
-        f_lb = f_window(1);
-        f_ub = f_window(end);
+
 
         id_f = faxis >= f_lb & faxis <= f_ub;
         q_data = q_f(id_f);
@@ -93,8 +109,8 @@ switch method
 
         % Guess parameters vector
         theta0 = th_true.*[1.2 1.1 0.8 1.1 0.7 1.1];
+        theta0 = th_true;
 
-   
         switch optim_method
             case 0
 
@@ -121,7 +137,7 @@ switch method
                 Nfcn = size(TF_new, 1)*size(TF_new, 2);
 
                 % R = identity by default
-                [J, eH] = J_LS(yH, yH_sim);
+                [J, eH, R] = J_LS(yH, yH_sim);
                 eH = reshape(eH, Nf, 2*Nfcn);
 
                 % Optimization procedure to get optimal theta parameters - Newton-Raphson
@@ -132,21 +148,20 @@ switch method
                 % Iterative search cycle
                 c = 0; % Iteration counter
                 Nmax = 15; % Max number of iterations
-                DTHETA_THR = 1e-3; % Step tolerance
-                DJ_THR = 1e-3; % Function Tolerance
+                DTHETA_THR = 1e-9; % Step tolerance
+                DJ_THR = 1e-12; % Function Tolerance
 
                 % Initialize guess vector
                 theta = theta0;
+                % Rinv must have size equal to 2*Number of entries in the transfer
+                % function matrix
+                Rinv = R^(-1);
 
                 while ~CONVERGED
 
                     % Initialization of Gradient vector and Hessian Matrix
                     GJ = zeros(Nparams, 1);
                     HJ = zeros(Nparams, Nparams);
-
-                    % Rinv must have size equal to 2*Number of entries in the transfer
-                    % function matrix
-                    Rinv = eye(2*Nfcn);
 
                     % idp indexes the parameter in theta
                     dFRFdth = ComputeSensitivity(yH_sim, faxis, theta);
@@ -163,6 +178,12 @@ switch method
                         HJ = HJ + dFRFdth_idp' * Rinv * dFRFdth_idp;
                     end
 
+                    eigH = eig(HJ);
+
+                    if min(eigH) <= 0
+                        warning('Hessian not positive definite')
+                    end
+
                     % Evaluate dtheta to find new guess vector
                     diff_theta = -HJ\GJ;
 
@@ -177,9 +198,11 @@ switch method
                     % Determine frequency response
                     yH_sim_new = evalFreqR(TF_new, faxis, 'Hz');
                     % Evaluate new cost and deviations
-                    [J_new, e_new] = J_LS(yH, yH_sim_new);
+                    [J_new, e_new, R] = J_LS(yH, yH_sim_new);
                     % Reshape deviations array: Columns: Re1 Im1 Re2 Im2
                     e_new = reshape(e_new, Nf, 2*Nfcn);
+
+                    Rinv = R^(-1);
 
                     % Stop the iteration if the cost is increasing
                     cost_prev = J;
@@ -197,25 +220,21 @@ switch method
 
                     % update
                     theta = theta_new;
-                    
+                
 
                     J = J_new;
                     eH = e_new;
                     yH_sim = yH_sim_new;
 
                     % DEBUG
-                    fprintf('Iteration #%d\t cost function value %f ', c, J);
+                    fprintf('Iteration #%d cost function value %f ', c, J);
                     for ii = 1:Nparams
                         fprintf('\ttheta%d %f ', ii, theta(ii));
                     end
                     fprintf('\n');
                     c = c + 1;
                 end
-
-
         end
-
-
 end
 
 % Error with respect to true theta
@@ -223,7 +242,7 @@ est_err = th_true' - theta;
 fprintf("Initial Error: %4.4f\n", th_true - theta0);
 fprintf("Error: %4.4f\n", est_err);
 
-
+return
 
 %% Uncertainty assessment
 % if method == 1

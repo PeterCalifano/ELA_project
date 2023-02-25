@@ -1,4 +1,4 @@
-function [J, eH] = J_LS(yH, yH_sim, R)
+function [J, eH, R] = J_LS(yH, yH_sim, R)
 %% PROTOTYPE
 % -------------------------------------------------------------------------------------------------------------
 %% DESCRIPTION
@@ -37,24 +37,18 @@ end
 J = 0;
 
 % J = 1/2 * sum(e'* (R^-1) * e);
-if 0 %(Nf2 * Nfcn2)^2 < 100^2 && flag_R == 0 % Use vectorial operation
-%     warning('TO VALIDATE')
-    % Compute deviations
-    % 1st col: re(G1), 2nd col: im(G1) to Nth-1 col: re(GN), Nth col: im(GN)
-    eH = reshape(yH - yH_sim, Nfcn2*Nf, 1);
-    % Compute scalar cost
-    J = 0.5 * eH' * R^-1 * eH;
 
-else % Use for loop
-    % Compute deviations
-    eH = reshape(yH - yH_sim, 2*Nf, Nfcn);
-    % Compute scalar cost
-%     warning('TO VALIDATE')
-    for id = 1:Nf2
-        J = J + 0.5 * eH(id, :) * R^-1 * eH(id, :)';
-    end
-
+% Compute deviations
+eH = reshape(yH - yH_sim, Nf, 2*Nfcn);
+% Compute scalar cost
+for idf = 1:Nf
+    R = eH' * eH;
 end
+R = R./Nf;
+Rinv = R^(-1);
 
+for id = 1:Nf
+    J = J + 0.5 * eH(id, :) * Rinv * eH(id, :)';
+end
 
 end

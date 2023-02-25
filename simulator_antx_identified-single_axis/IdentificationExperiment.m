@@ -8,21 +8,21 @@ clear ExcitationM;
 t0 = 0;
 K = x(1);
 tf = x(2);
-params.beta = 1.015;
-f0 = x(3);
-ff = x(4);
 
-% Generate Input
+params.beta = 1.015; % Assumed
 params.t0 = t0;
 params.tf = tf;
 params.dt = sample_time;
-params.ff = ff;
-params.f0 = f0;
 
-%%
+if length(signal_type) > 1 || signal_type <= 2
+    f0 = x(3);
+    ff = x(4);
+    params.ff = ff;
+    params.f0 = f0;
+end
 
-if length(signal_type) > 1 || (signal_type == 3 || signal_type == 4 ...
-        || signal_type == 5)
+% Generate Input
+if length(signal_type) > 1
     switch signal_type(end)
         case 3
             T = x(5);
@@ -34,6 +34,13 @@ if length(signal_type) > 1 || (signal_type == 3 || signal_type == 4 ...
             N = x(5);
             params.N = N;
     end
+
+elseif signal_type == 3
+    T = x(3);
+    params.T = T;
+elseif signal_type == 4 || signal_type == 5
+    N = x(3);
+    params.N = N;
 end
 
 
