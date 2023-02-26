@@ -4,7 +4,7 @@ function [signal, timevec] = CombineInput(params, signal_type)
 if isfield(params, 'tfrac')
     tfrac = params.tfrac;
 else
-    tfrac = 0.8;
+    tfrac = 0.5;
 end
 
 tf_mid = tfrac * params.tf;

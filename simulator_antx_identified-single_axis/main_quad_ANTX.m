@@ -115,10 +115,10 @@ end
 N_delay = 1;
 
 time_grid = output.time_grid;
-Excit_signal = output.Excit_signal;
 CutInputMask = time_grid >= 23 & time_grid <= 100;
 
 % Extract useful input/output samples 
+Excit_signal = output.Excit_signal(CutInputMask);
 Mtot = output.Mtot(CutInputMask);
 ax = output.ax(CutInputMask);
 q = output.q(CutInputMask);
@@ -127,64 +127,68 @@ time_grid = time_grid(CutInputMask);
 % dt = 1/250; % 250 Hz, defined in parameters_controller
 % Consider delay of the output (1 samples): shift of I/O signals
 time_grid = time_grid((1+N_delay):end);
-
+Excit_signal = Excit_signal(1:(end-N_delay));
 Mtot = Mtot(1:(end-N_delay));
 ax = ax((1+N_delay):end);
 q = q((1+N_delay):end);
 
 %% Input and Output signals plot
 
-% figure;
-% plot(time_grid, Mtot, '-');
-% xlabel('Time [s]');
-% ylabel('Excitation signal')
-% Default Options
-% grid minor
-% axis auto
-% ax = gca;
-% ax.XAxisLocation = 'bottom';
-% ax.YAxisLocation = 'left';
-% ax.XMinorTick = 'on';
-% ax.YMinorTick = 'on';
-% ax.LineWidth = 1.04;
+figure;
+plot(time_grid, Mtot, '-', 'LineWidth', 1.02);
+hold on;
+plot(time_grid, Excit_signal, '-', 'LineWidth', 1.05)
+xlabel('Time [s]');
+ylabel('Signal Amplitude [-]')
+% Default options
+grid minor
+axis auto
+ax_gca = gca;
+ax_gca.XAxisLocation = 'bottom';
+ax_gca.YAxisLocation = 'left';
+ax_gca.XMinorTick = 'on';
+ax_gca.YMinorTick = 'on';
+ax_gca.LineWidth = 1.04;
+hold off;
+legend('Excitation signal', 'Input torque')
 
-
-% figure;
-% plot(time_grid, ax, '-');
-% xlabel('Time [s]');
-% ylabel('Longitudinal acceleration [m/s^2]')
+figure;
+plot(time_grid, ax, '-', 'LineWidth', 1.02);
+xlabel('Time [s]');
+ylabel('Longitudinal acceleration [$m/s^2$]')
 % Default Options
-% grid minor
-% axis auto
-% ax = gca;
-% ax.XAxisLocation = 'bottom';
-% ax.YAxisLocation = 'left';
-% ax.XMinorTick = 'on';
-% ax.YMinorTick = 'on';
-% ax.LineWidth = 1.04;
+grid minor
+axis auto
+ax_gca = gca;
+ax_gca.XAxisLocation = 'bottom';
+ax_gca.YAxisLocation = 'left';
+ax_gca.XMinorTick = 'on';
+ax_gca.YMinorTick = 'on';
+ax_gca.LineWidth = 1.04;
+hold off;
 
-% figure;
-% plot(time_grid, rad2deg(q), '-');
-% xlabel('Time [s]')
-% ylabel('Pith rate q [deg/s]');
+figure;
+plot(time_grid, rad2deg(q), '-', 'LineWidth', 1.02);
+xlabel('Time [s]')
+ylabel('Pith rate q [deg/s]');
 % Default Options
-% grid minor
-% axis auto
-% ax = gca;
-% ax.XAxisLocation = 'bottom';
-% ax.YAxisLocation = 'left';
-% ax.XMinorTick = 'on';
-% ax.YMinorTick = 'on';
-% ax.LineWidth = 1.04;
-% close all
+grid minor
+axis auto
+ax_gca = gca;
+ax_gca.XAxisLocation = 'bottom';
+ax_gca.YAxisLocation = 'left';
+ax_gca.XMinorTick = 'on';
+ax_gca.YMinorTick = 'on';
+ax_gca.LineWidth = 1.04;
+hold off;
 
 % Call script for Model Identification
-run('IdentifyModel.m');
+run('IdentifyModel');
 clear;
+
 return
 % Call script for Optimization of the input signal
 run('OptimizeIdentification.m');
-
 
 %% END OF CODE
 

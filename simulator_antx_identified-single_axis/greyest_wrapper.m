@@ -19,6 +19,11 @@ function [fitmodel, est_params, est_unc] = greyest_wrapper(data_to_fit, model_fu
 
 
 %% Function code
+set(groot, 'defaultAxesTickLabelInterpreter', 'latex');
+set(groot, 'defaultLegendInterpreter', 'latex');
+set(groot, 'defaulttextinterpreter', 'latex');
+set(0, 'defaultAxesFontSize', 16);
+
 % Guess parameters vector
 % theta0 = th_true.*[1.2 1.1 0.8 1.1 0.7 1.1];
 
@@ -46,7 +51,8 @@ fcn_type = 'c';
 % Assembly Frequency Response Data
 % data = frd(freqdata, faxis_masked);
 % Create grey model for identification
-greyobj = idgrey(model_fun, parameters, fcn_type);
+greyobj = idgrey(model_fun, parameters, fcn_type, 'OutputUnit', {'rad/s', 'm/s2'},...
+    'InputName', {'M_{tot}'}, 'OutputName', {'q','ax'});
 
 % Set grey identification options
 if display_flag == 1

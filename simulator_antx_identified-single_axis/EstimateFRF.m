@@ -10,9 +10,9 @@
 
 % Divide signal into K parts of length M from zero mean signals
 % Windows Overlap coefficient
-x_frac = 0.5;
+x_frac = 0.45;
 % Number of Windows
-K = 20;
+K = 50;
 
 % Window length
 T_win = time_grid(end)/((K-1)*(1-x_frac)+1);
@@ -24,7 +24,6 @@ Nsamples = 2*round(Nsamples/2)-1;
 N_win = round(Nsamples/((K-1)*(1-x_frac)+1));
 
 % Subdivision of data into K records of individual length T_win
-
 yax_int = cell(1,K);
 yq_int  = cell(1,K);
 xd_int  = cell(1,K);
@@ -44,10 +43,6 @@ t_int{K} = time_grid(end-N_win:end);
 for k=2:K-1
 
     indexes = ceil((1-x_frac)*(k-1)*N_win):ceil((1-x_frac)*(k-1)*N_win+N_win);
-
-%     while indexes(end) > length(time_grid)
-%         indexes(end) = [];
-%     end
 
     yax_int{k} = ax_zm(indexes);
     yq_int{k} = q_zm(indexes);
@@ -72,7 +67,6 @@ end
 
 %% DFT of signals
 % Apply DFT to each kth part
-
 Y_ax = cell(1,K);
 Y_q  = cell(1,K);
 X_d  = cell(1,K);
@@ -80,7 +74,6 @@ X_d  = cell(1,K);
 for k = 1:K
     upper_index = (Nsamples+1)/2;
 
-    % Why is fft called with Nsamples as number of samples?
     X1 = fft(d_window{k}, Nsamples);
     X_d{k} = X1(1:upper_index);
 
@@ -133,14 +126,28 @@ G_da = mean(G_da_mat,2);
 G_dq_mat = cell2mat(G_dq_rough);
 G_dq = mean(G_dq_mat, 2);
 
-
 %% FRF estimation from PSD
-H1 = G_dq./G_dd;
-H2 = G_da./G_dd;
+H1_hat = G_dq./G_dd;
+H2_hat = G_da./G_dd;
 
 % Test Coherence evaluation function
-gamma2_dq = EstimateCoherence(G_dq, G_dd, G_qq, 2*pi*f_axis);
-title('Coherence of $H_1$')
+gamma2_dq = EstimateCoherence(G_dq, G_dd, G_qq);
+gamma2_da = EstimateCoherence(G_da, G_dd, G_aa);
+% Plot of H1, H2 FRF estimators
+figure;
+semilogx(f_axis, gamma2_dq, '.-', 'LineWidth', 1.02);
+hold on;
+semilogx(f_axis, gamma2_da, '.-', 'LineWidth', 1.02);
+hold off;
+
+title('Coherence of FRF estimators')
+xlabel("Frequency [Hz]", 'Interpreter', 'latex');
+ylabel("$|\gamma_{uy}|^2$ [-]", 'Interpreter', 'latex');
+legend("$\hat{H}_{\delta q}(f)$", "$\hat{H}_{\delta a_x}(f)$", 'Location', 'best');
+% Default options
+grid minor;
+axis auto;
+ylim([0 1.1])
 ax = gca;
 ax.XAxisLocation = 'bottom'; 
 ax.YAxisLocation = 'left';
@@ -149,21 +156,12 @@ ax.YMinorTick = 'on';
 ax.LineWidth = 1.04;
 hold off;
 
-gamma2_da = EstimateCoherence(G_da, G_dd, G_aa, 2*pi*f_axis);
-title('Coherence of $H_2$')
-ax = gca;
-ax.XAxisLocation = 'bottom'; 
-ax.YAxisLocation = 'left';
-ax.XMinorTick = 'on';
-ax.YMinorTick = 'on';
-ax.LineWidth = 1.04;
-hold off;
 
-% Select frequency ranges to use for Identification model
-gamma2_thr = 0.8;
+% Select frequency ranges in which the FRF is deemed to be reliable
+gamma2_thr = 0.6;
 % Create Bool Mask
 MaskFreq = gamma2_dq >= gamma2_thr & gamma2_da >= gamma2_thr;
 % Extrac useful frequency points
 faxis_masked = f_axis(MaskFreq);
 % Estimated FRF of the system
-H_est = [H1(MaskFreq), H2(MaskFreq)];
+H_hat = [H1_hat(MaskFreq), H2_hat(MaskFreq)];
