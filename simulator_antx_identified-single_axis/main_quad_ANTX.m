@@ -78,14 +78,12 @@ noise.vel_stand_dev = noise.Enabler * 0.01;                                %[m/s
 noise.attitude_stand_dev = noise.Enabler * deg2rad(0.0076);                 %[rad]
 noise.ang_rate_stand_dev = noise.Enabler * deg2rad(0.01);                   %[rad/s]
 
-% Delays
-% Delay = 4 sampling intervals = 4 ms
+% Delays (samples)
 delay.position_filter = 1;
 delay.attitude_filter = 1;
 delay.mixer = 1;
 
 %% Load controller parameters
-
 parameters_controller                    
 
 %% M injection example (sweeep: first column time vector, second column time history of pitching moment) 
@@ -102,13 +100,10 @@ t = ExcitationM(:, 1);
 simulation_time = t(end) - t(1);
 decimation = 1; % [s]
 
-% Simulate or load sample output
-% if exist('simout.mat', 'file')
+% Simulate system and save output
 output = sim(model_name, 'TimeOut', simulation_time);
 save('simout.mat', "output");
-% else
-%     load('simout.mat');
-% end
+
 
 %% Delete temporary files
 
@@ -130,53 +125,65 @@ q = output.q(CutInputMask);
 time_grid = time_grid(CutInputMask);
 
 % dt = 1/250; % 250 Hz, defined in parameters_controller
+% Consider delay of the output (1 samples): shift of I/O signals
 time_grid = time_grid((1+N_delay):end);
-% Consider delay of the output (1 samples)
+
 Mtot = Mtot(1:(end-N_delay));
 ax = ax((1+N_delay):end);
 q = q((1+N_delay):end);
 
-% TO MODIFY: DELAY APPLIES TO TIME GRID, not SAMPLE INDEX. Must be
-% equivalent to: 
-
-% s_time_out = s_time + 1/fs*4; %sampling time for the output + delay
-% % Normalized pitch moment resampling at 250 Hz
-% M = M - mean(M); %removed bias
-% meas.M = interp1(tM,M,s_time_in);
-
-% Remove time samples where Excitation signal 
+%% Input and Output signals plot
 
 % figure;
 % plot(time_grid, Mtot, '-');
 % xlabel('Time [s]');
 % ylabel('Excitation signal')
-% grid minor;
-% 
+% Default Options
+% grid minor
+% axis auto
+% ax = gca;
+% ax.XAxisLocation = 'bottom';
+% ax.YAxisLocation = 'left';
+% ax.XMinorTick = 'on';
+% ax.YMinorTick = 'on';
+% ax.LineWidth = 1.04;
+
+
 % figure;
 % plot(time_grid, ax, '-');
 % xlabel('Time [s]');
 % ylabel('Longitudinal acceleration [m/s^2]')
-% grid minor;
-% 
+% Default Options
+% grid minor
+% axis auto
+% ax = gca;
+% ax.XAxisLocation = 'bottom';
+% ax.YAxisLocation = 'left';
+% ax.XMinorTick = 'on';
+% ax.YMinorTick = 'on';
+% ax.LineWidth = 1.04;
+
 % figure;
 % plot(time_grid, rad2deg(q), '-');
 % xlabel('Time [s]')
 % ylabel('Pith rate q [deg/s]');
-% grid minor;
-% 
+% Default Options
+% grid minor
+% axis auto
+% ax = gca;
+% ax.XAxisLocation = 'bottom';
+% ax.YAxisLocation = 'left';
+% ax.XMinorTick = 'on';
+% ax.YMinorTick = 'on';
+% ax.LineWidth = 1.04;
 % close all
 
-% TO DO: EVALUATE WHETHER LOWPASS FILTERING IS USEFUL
-% Call script to estimate Frequency Response Function from output time signals
-% output_delay = 0.016; % [s]
-
 % Call script for Model Identification
-
-
-IdentifyModel;
-
-% clear;
-% OptimizeIdentification;
+run('IdentifyModel.m');
+clear;
+return
+% Call script for Optimization of the input signal
+run('OptimizeIdentification.m');
 
 
 %% END OF CODE

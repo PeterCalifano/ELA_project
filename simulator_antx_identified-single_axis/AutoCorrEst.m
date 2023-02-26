@@ -31,11 +31,11 @@ x = x - signal_mean;
 signal_zm = x;
 
 % Estimate R_xx
-% for nt = 1:Nsamples-1
-%     for n = 1:Nsamples - nt
-%         R_xx(nt) = R_xx(nt) + (x(n)*x(n + nt))/(Nsamples-nt);
-%     end
-% end
+for nt = 1:Nsamples-1
+    for n = 1:Nsamples - nt
+        R_xx(nt) = R_xx(nt) + (x(n)*x(n + nt))/(Nsamples-nt);
+    end
+end
 
 
 end

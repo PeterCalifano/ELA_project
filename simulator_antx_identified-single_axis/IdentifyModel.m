@@ -18,80 +18,91 @@ switch method
     case 0 % MATLAB Built-in Greyest identification
 
         %% Compute and remove mean
-
         N = length(delta_zm);
         
         K = 8;
+        % Create window for averaging
         Window = hanning(floor(N/K));
 
         % Cross-correlation of input and output signals in time-domain
-% TODO: % Make two axes graph, with frequency band identified with two
-        % lines
-
         [cohr1, f1] = mscohere(delta_zm, q_zm, Window, [], [], 1/sample_time); % f1 is in Hz
         [cohr2, ~] = mscohere(delta_zm, ax_zm, Window, [], [], 1/sample_time);
 
+
+        % Coherence plot (OK)
         time_coherence = figure;
+        semilogx(f1, cohr1, '-', 'LineWidth', 1.03);
         hold on;
-
-        %         figure
-        %         subplot(2, 1, 1)
-        
-        semilogx(f1, cohr1, '-', 'LineWidth', 1.02);
-        %         xlabel('Frequency [Hz]')
-        %         grid minor
-        %         title('Coherence $\delta$-$q$')
-        %
-        %         subplot(2, 1, 2)
-
-        semilogx(f1, cohr2, '-', 'LineWidth', 1.02);
-        %         xlabel('Frequency [Hz]')
-        %         grid minor
-        %         title('Coherence $\delta$-$a_x$')
-
+        semilogx(f1, cohr2, '-', 'LineWidth', 1.03);
         f_window = f1(cohr1 > 0.6 & cohr2 > 0.6);
+        
         f_lb = f_window(1);
+        f_window = f_window(f_window <= 10);
         f_ub = f_window(end);
 
-        title('Coherence of Output and Input time series')
-        xlabel('Frequency [rad/s]')
-        ylabel('Coherence $|\gamma_{uy}|$')
-        yline(f_lb, 'k--', num2str(f_lb) + " Hz");
-        yline(f_ub, 'k--', num2str(f_ub) + " Hz");
-        legend('$\delta$-$q$', '$\delta$-$a_x$', '', '');
+        xline(f_lb, 'k--', num2str(f_lb) + " Hz", 'LineWidth', 1.04, 'FontSize', 12, ...
+            'LabelOrientation', 'horizontal' , 'LabelVerticalAlignment','bottom');
+
+        xline(f_ub, 'k--', num2str(f_ub) + " Hz", 'LineWidth', 1.04, 'FontSize', 12, ...
+            'LabelOrientation', 'horizontal', 'LabelVerticalAlignment','bottom');
+
+        title('Coherence - Output and Input time series')
+        xlabel('Frequency [Hz]')
+        ylabel('$|\gamma_{uy}|$')
+        legend('$\delta$ with $q$', '$\delta$ with $a_x$', '', '', 'Location', 'best');
+
+        % Default Options
+        grid minor
+        axis auto
+        ylim([0 1.1])
+        ax = gca;
+        ax.XAxisLocation = 'bottom';
+        ax.YAxisLocation = 'left';
+        ax.XMinorTick = 'on';
+        ax.YMinorTick = 'on';
+        ax.LineWidth = 1.04;
+        hold off;
 
         % Define data structure for greyest
         data_time = iddata([q_zm, ax_zm], delta_zm, sample_time);
         % Transform to frequency domain
-        data = fft(data_time); % frequency in rad/s
+        data_freq = fft(data_time); % frequency in rad/s
 
-        q_f = data.OutputData(:, 1);
-        ax_f = data.OutputData(:, 2);
-        delta_f = data.InputData;
-        faxis = data.Frequency./(2*pi);
+        q_f = data_freq.OutputData(:, 1);
+        ax_f = data_freq.OutputData(:, 2);
+        delta_f = data_freq.InputData;
+        % f_axis in [Hz] Validated by looking at Excitation signal 
+        faxis = data_freq.Frequency./(2*pi); 
 
+        % Input spectrum plot (OK)
         figure;
-        semilogy(faxis, abs(delta_f), 'k-', 'LineWidth', 1.01)
-          xlabel('Frequency [Hz]')
-          ylabel('$|M(f)|$ [dB]')
+        loglog(faxis, abs(delta_f), 'k-', 'LineWidth', 1.02)
+        xlabel('Frequency [Hz]')
+        ylabel('$|M(\omega)|$ [dB]')
+        title('Input signal $M_{tot}$ - Frequency spectrum');
+        % Default Options
         grid minor
         axis auto
-        title('Input signal - Frequency spectrum')
+        ax = gca;
+        ax.XAxisLocation = 'bottom';
+        ax.YAxisLocation = 'left';
+        ax.XMinorTick = 'on';
+        ax.YMinorTick = 'on';
+        ax.LineWidth = 1.04;
 
-
-
+        % Extract samples at frequencies of interest
         id_f = faxis >= f_lb & faxis <= f_ub;
+
         q_data = q_f(id_f);
         ax_data = ax_f(id_f);
         delta_data = delta_f(id_f);
 
+        % Encapsulate frequency domain data for fitting
         data_to_fit = iddata([q_data, ax_data], delta_data, sample_time,...
             'Frequency', faxis(id_f), 'FrequencyUnit', 'Hz');
 
         % Guess parameters vector
-        %         theta0 = (-ones(1, 6).^(round(rand(1, 6)))).*randi(133, 1, 6).*th_true;
         theta0 = th_true.*[1.2 1.1 0.8 1.1 0.7 1.1];
-        %         theta0 = th_true;
 
         % Generate initial guess for greyest function
         model_fun = 'LongDyn_ODE';
@@ -109,7 +120,6 @@ switch method
 
         % Guess parameters vector
         theta0 = th_true.*[1.2 1.1 0.8 1.1 0.7 1.1];
-        theta0 = th_true;
 
         switch optim_method
             case 0
@@ -237,52 +247,43 @@ switch method
         end
 end
 
-% Error with respect to true theta
-est_err = th_true' - theta;
-fprintf("Initial Error: %4.4f\n", th_true - theta0);
-fprintf("Error: %4.4f\n", est_err);
-
-return
 
 %% Uncertainty assessment
-% if method == 1
-%     th_nom = [fitmodel.A(1, 1), fitmodel.A(2, 1), fitmodel.A(1, 2),...
-%         fitmodel.A(2, 2), fitmodel.B(1), fitmodel.B(2)];
-%     Hnom = Hmodelstruct(th_nom);
-% 
-%     y_nom = evalFreqR(Hnom(1), faxis_masked, 'Hz');
-%     M = EstimateFisher(y_nom, th_nom, 1, faxis_masked);
-%     Cth = M^-1;
-%     [eigvec, eigval] = eig(Cth);
-% end
 
-% Simone did: trace of standard deviation (relative) 
-
-% Alternatives for uncertainty assessment
-% 1) From greyest --> uncertainty in terms of relative std. dev. of the
-% parameters
+% Error with respect to true theta
+est_err = abs(th_true' - theta);
+est_err0 = abs(th_true - theta0);
 
 % Print uncertainties
-% cell_param = {'Xu', 'Mu', 'Xq', 'Mq', 'Xd', 'Md'};
-% fprintf("\n\n");
-% for idp = 1:length(est_unc)
-%     fprintf("%s: std. dev.: %4.3g; relative dev.: %4.3g \n",...
-%         cell_param{idp}, est_unc(idp), est_unc(idp)./theta(idp));
-% end
+fprintf("Initial guess error and fit model error:" + ...
+    "\nXu: %3.5f; \t %3.5f" + ...
+    "\nMu: %3.5f; \t %3.5f" + ...
+    "\nXq: %3.5f; \t %3.5f" + ...
+    "\nMq: %3.5f; \t %3.5f" + ...
+    "\nXd: %3.5f; \t %3.5f" + ...
+    "\nMd: %3.5f; \t %3.5f\n",...
+    est_err0(1), est_err(1), ...
+    est_err0(2), est_err(2), ...
+    est_err0(3), est_err(3), ...
+    est_err0(4), est_err(4), ...
+    est_err0(5), est_err(5), ...
+    est_err0(6), est_err(6));
+
 
 fprintf("\nIdentified model parameters and relative 3-sigma uncertainty (Gaussian distr. assumption):" + ...
-    "\nXu = %3.3g\t 3sig\%: %3.3g" + ...
-    "\nMu = %3.3g\t 3sig\%: %3.3g" + ...
-    "\nXq = %3.3g\t 3sig\%: %3.3g" + ...
-    "\nMq = %3.3g\t 3sig\%: %3.3g" + ...
-    "\nXd = %3.3g\t 3sig\%: %3.3g" + ...
-    "\nMd = %3.3g\t 3sig\%: %3.3g", ...
+    "\nXu = %3.3g\t 3sig %%: %3.3g" + ...
+    "\nMu = %3.3g\t 3sig %%: %3.3g" + ...
+    "\nXq = %3.3g\t 3sig %%: %3.3g" + ...
+    "\nMq = %3.3g\t 3sig %%: %3.3g" + ...
+    "\nXd = %3.3g\t 3sig %%: %3.3g" + ...
+    "\nMd = %3.3g\t 3sig %%: %3.3g\n\n", ...
     theta(1), 100*abs(3*est_unc(1)./theta(1)), ...
     theta(2), 100*abs(3*est_unc(2)./theta(2)), ...
     theta(3), 100*abs(3*est_unc(3)./theta(3)), ...
     theta(4), 100*abs(3*est_unc(4)./theta(4)), ...
     theta(5), 100*abs(3*est_unc(5)./theta(5)), ...
     theta(6), 100*abs(3*est_unc(6)./theta(6)));
+
 
 
 % 2) Bodeplots of TFs from identified model, data through spafdr and
@@ -308,11 +309,12 @@ w_axis = 2*pi*faxis_masked; % Frequency axis in rad/s
 TF_spafdr = spafdr(iddata([q_data, ax_data], delta_data, sample_time, 'Frequency', 2*pi*faxis(id_f), 'FrequencyUnit', 'rad/s'));
 [mag_b, phase_b] = bode(TF_spafdr, w_out);
 
+% Phase wrapping
 phase_a = wrapTo180(phase_a);
 phase_b = wrapTo180(phase_b);
 
 % NOTE: 20 or 10 to convert H in log scale --> check what bode() uses
-legend_cell = {'greyest model', 'spafdr', 'KW estimator', '', ''};
+legend_cell = {'greyest model', 'spafdr()', 'FRF estimator', '', ''};
 % TF: delta --> q
 id = 1;
 figure;
@@ -320,22 +322,23 @@ figure;
 subplot(2, 1, 1);
 hold on;
 semilogx(w_out, squeeze(mag_a(1, 1, :)), '-', 'LineWidth', 1.05, 'DisplayName', 'greyest model');
-semilogx(w_out, squeeze(mag_b(1, 1, :)), '-', 'LineWidth', 1.05, 'DisplayName', 'spafdr');
-semilogx(w_axis(w_axis <= w_out(end)), 10*log10(abs(H_est((w_axis <= w_out(end)), 1))), '-', 'LineWidth', 1.05, 'DisplayName', 'KW estimator');
+semilogx(w_out, squeeze(mag_b(1, 1, :)), '-', 'LineWidth', 1.05, 'DisplayName', 'spafdr()');
+semilogx(w_axis(w_axis <= w_out(end)), 10*log10(abs(H_est((w_axis <= w_out(end)), 1))), '-', 'LineWidth', 1.05, 'DisplayName', 'FRF estimator');
 grid minor
 axis auto;
-
-ax = gca;
-ax.XAxisLocation = 'bottom'; 
-ax.YAxisLocation = 'left';
-ax.XMinorTick = 'on';
-ax.YMinorTick = 'on';
-ax.LineWidth = 1.04;
 xlabel('Frequency [rad/s]')
 ylabel('Gain [dB]')
 title('Bode magnitude of $H_{\delta q}$')
 legend()
-
+% Default Options
+grid minor
+axis auto
+ax = gca;
+ax.XAxisLocation = 'bottom';
+ax.YAxisLocation = 'left';
+ax.XMinorTick = 'on';
+ax.YMinorTick = 'on';
+ax.LineWidth = 1.04;
 hold off;
 
 % Phase
@@ -343,33 +346,41 @@ subplot(2, 1, 2);
 hold on;
 semilogx(w_out, (squeeze(phase_a(id, 1, :))), '-', 'LineWidth', 1.05, 'DisplayName', 'greyest model');
 semilogx(w_out, (squeeze(phase_b(id, 1, :))), '-', 'LineWidth', 1.05, 'DisplayName', 'spafdr');
-semilogx(w_axis(w_axis <= w_out(end)), rad2deg(angle(H_est((w_axis <= w_out(end)), id))), '-', 'LineWidth', 1.05, 'DisplayName', 'KW estimator');
-yline(-180, 'k--', 'DisplayName', '');
-yline(+180, 'k--', 'DisplayName', '');
-grid minor
-axis auto;
-
-ax = gca;
-ax.XAxisLocation = 'bottom'; 
-ax.YAxisLocation = 'left';
-ax.XMinorTick = 'on';
-ax.YMinorTick = 'on';
-ax.LineWidth = 1.04;
+semilogx(w_axis(w_axis <= w_out(end)),...
+    rad2deg(angle(H_est((w_axis <= w_out(end)), id))), '-', 'LineWidth', 1.05, 'DisplayName', 'FRF estimator');
+yline(-180, 'k--', 'LineWidth', 1.03);
+yline(+180, 'k--', 'LineWidth', 1.03);
 xlabel('Frequency [rad/s]')
 ylabel('Phase [deg]')
 title('Bode phase of $H_{\delta q}$')
 legend(legend_cell);
-
-
+% Default Options
+grid minor
+axis auto
+ax = gca;
+ax.XAxisLocation = 'bottom';
+ax.YAxisLocation = 'left';
+ax.XMinorTick = 'on';
+ax.YMinorTick = 'on';
+ax.LineWidth = 1.04;
 hold off;
+
+return
 
 % Fitting index computation
 % NOTE: compare uses FIT metric
 figure;
 compare(data_to_fit, fitmodel);
-grid minor;
-axis auto;
 title('Evaluation of goodness of fit from greyest identified model');
+grid minor
+axis auto
+ax = gca;
+ax.XAxisLocation = 'bottom';
+ax.YAxisLocation = 'left';
+ax.XMinorTick = 'on';
+ax.YMinorTick = 'on';
+ax.LineWidth = 1.04;
+hold off;
 
 % TF: delta --> ax
 id = 2;
@@ -380,20 +391,20 @@ hold on;
 semilogx(w_out, squeeze(mag_a(id, 1, :)), '-', 'LineWidth', 1.05, 'DisplayName', 'greyest model');
 semilogx(w_out, squeeze(mag_b(id, 1, :)), '-', 'LineWidth', 1.05, 'DisplayName', 'spafdr');
 semilogx(w_axis(w_axis <= w_out(end)), 10*log10(abs(H_est((w_axis <= w_out(end)), 1))), '-', 'LineWidth', 1.05, 'DisplayName', 'KW estimator');
-grid minor;
-axis auto;
 
-ax = gca;
-ax.XAxisLocation = 'bottom'; 
-ax.YAxisLocation = 'left';
-ax.XMinorTick = 'on';
-ax.YMinorTick = 'on';
-ax.LineWidth = 1.04;
 xlabel('Frequency [rad/s]');
 ylabel('Gain [dB]');
 title('Bode magnitude of $H_{\delta a_x}$')
 legend();
-
+% Default options
+grid minor
+axis auto
+ax = gca;
+ax.XAxisLocation = 'bottom';
+ax.YAxisLocation = 'left';
+ax.XMinorTick = 'on';
+ax.YMinorTick = 'on';
+ax.LineWidth = 1.04;
 hold off;
 
 % Phase
@@ -402,24 +413,25 @@ hold on;
 semilogx(w_out, (squeeze(phase_a(id, 1, :))), '-', 'LineWidth', 1.05, 'DisplayName', 'greyest model');
 semilogx(w_out, (squeeze(phase_b(id, 1, :))), '-', 'LineWidth', 1.05, 'DisplayName', 'spafdr');
 semilogx(w_axis(w_axis <= w_out(end)), rad2deg(angle(H_est((w_axis <= w_out(end)), id))), '-', 'LineWidth', 1.05, 'DisplayName', 'KW estimator');
-yline(-180, 'k--');
-yline(+180, 'k--');
-grid minor;
-axis auto;
-
-ax = gca;
-ax.XAxisLocation = 'bottom'; 
-ax.YAxisLocation = 'left';
-ax.XMinorTick = 'on';
-ax.YMinorTick = 'on';
-ax.LineWidth = 1.04;
+yline(-180, 'k--', 'LineWidth', 1.03);
+yline(+180, 'k--', 'LineWidth', 1.03);
 xlabel('Frequency [rad/s]');
 ylabel('Phase [deg]');
 title('Bode phase of $G_{\delta a_x}$');
 legend(legend_cell);
 
+% Default options
+grid minor
+axis auto
+ax = gca;
+ax.XAxisLocation = 'bottom';
+ax.YAxisLocation = 'left';
+ax.XMinorTick = 'on';
+ax.YMinorTick = 'on';
+ax.LineWidth = 1.04;
 hold off;
 
+%% UP TO HERE SHOULD BE OK
 
 % 3) Bodeplots of identified model with confidence intervals from (1)
 figure;

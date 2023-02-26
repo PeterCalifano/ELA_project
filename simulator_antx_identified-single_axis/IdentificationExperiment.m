@@ -79,11 +79,17 @@ try
     q = q((1+N_delay):end);
 
     % Model identification process
-    Nsamples = length(time_grid);
+%     Nsamples = length(time_grid);
 
-    [~, q_zm, ~] = AutoCorrEst(q, Nsamples);
-    [~, ax_zm, ~] = AutoCorrEst(ax, Nsamples);
-    [~, delta_zm, ~] = AutoCorrEst(Mtot, Nsamples);
+    %     [~, q_zm, ~] = AutoCorrEst(q, Nsamples);
+    %     [~, ax_zm, ~] = AutoCorrEst(ax, Nsamples);
+    %     [~, delta_zm, ~] = AutoCorrEst(Mtot, Nsamples);
+
+    % Remove Mean from signals
+    q_zm = q - mean(q);
+    ax_zm = ax - mean(ax);
+    delta_zm = Mtot - mean(Mtot);
+
 
     N_T = length(delta_zm);
 
