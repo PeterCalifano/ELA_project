@@ -1,13 +1,12 @@
-% Optimization of the experiment for better model identification
+%% Experiment optimization
 theta0 = th_true.*[1.2 1.1 0.8 1.1 0.7 1.1];
-% theta0 = -rand(1, 6).*th_true;
 
 comb = 2;
+completed_flag = 0;
 
 switch comb
     case 1 % Linear Sine Sweep + RBS
         % Pameters: 1) K, 2) tf, 3) f0, 4) ff, 5) T
-
         % Initial guess for optimization
         x0 = [8, 295, 0.05, 20, 1];
 
@@ -16,10 +15,11 @@ switch comb
 
         signal_type = [1, 3];
 
-    case 2 % Linear Sine Sweep + 3211
-        % Pameters needed
-        % Pameters: 1) K, 2) tf, 3) f0, 4) ff, 5) N
+        % Percentage of time for the first signal type
+        params.tfrac = 0.5;
 
+    case 2 % Linear Sine Sweep + 3211 (HALF)
+        % Pameters: 1) K, 2) tf, 3) f0, 4) ff, 5) N
         % Initial guess for optimization
         x0 = [8, 200, 0.05, 10, 6];
 
@@ -27,10 +27,11 @@ switch comb
         UB = [50, 5*60, 0.05, 50, 20];
         signal_type = [1, 4];
 
-    case 3 % Sine Sweep 
-        % Pameters needed
-        % Pameters: 1) K, 2) tf, 3) f0, 4) ff
+        % Percentage of time for the first signal type
+        params.tfrac = 0.5;
 
+    case 3 % Sine Sweep 
+        % Pameters: 1) K, 2) tf, 3) f0, 4) ff
         % Initial guess for optimization
         x0 = [8, 295, 0.05, 20];
 
@@ -39,23 +40,21 @@ switch comb
 
         signal_type = 1;
 
-    case 4 % Logarithmic Sine Sweep
-        % Pameters needed
-        % Pameters: 1) K, 2) tf, 3) f0, 4) beta
-
+    case 4 % Linear Sine Sweep + 3211 (80/20)
+        
+        % Pameters: 1) K, 2) tf, 3) f0, 4) ff, 5) N
         % Initial guess for optimization
-        x0 = [8, 295, 0.05];
+        x0 = [8, 295, 0.05, 20, 1];
 
-        LB = [5, 1*60, 0.001];
-        UB = [40, 5*60, 0.2];
+        LB = [5, 1*60, 0.001, 1, 0.05];
+        UB = [40, 5*60, 0.2, 150, 10];
 
-        signal_type = 2;
+        signal_type = [1, 3];
+        % Percentage of time for the first signal type
+        params.tfrac = 0.8; 
 
     case 5 % RBS
-
-        % Pameters needed
         % Pameters: 1) K, 2) tf, 3) T
-
         % Initial guess for optimization
         x0 = [8, 295, 1];
 
@@ -65,10 +64,7 @@ switch comb
         signal_type = 3;
 
     case 6 % 3211
-
-        % Pameters needed
         % Pameters: 1) K, 2) tf, 3) N
-
         % Initial guess for optimization
         x0 = [8, 295, 5];
 
@@ -78,9 +74,7 @@ switch comb
         signal_type = 4;
 
     case 7 % Doublet
-        % Pameters needed
         % Pameters: 1) K, 2) tf, 3) N
-
         % Initial guess for optimization
         x0 = [8, 295, 5];
 
@@ -91,6 +85,7 @@ switch comb
 
 end
 
+if results_only == 0 
 % x0 = [8, 295, 0.02, 50];
 % x0 = [8,295,20];
 metric_selector = 1;
@@ -113,60 +108,138 @@ ga_opts = optimoptions("ga", "Display", 'iter', 'CrossoverFraction', 0.7, ...
 % [optimal_input, ] = fmincon(@(x) IdentificationExperiment(x, theta0,...
 %     metric_selector, 0), x0, [], [], [], [], LB, UB, [], fmincon_opts);
 
-% 3211 [8.173686814228478,2.521058987690398e+02,20.019986773376180]
-
 [optimal_input] = ga(@(x) IdentificationExperiment(x, theta0, signal_type,...
     metric_selector, 0), length(LB), [], [], [], [], LB, UB, [], [], ga_opts);
-
 
 [optimal_input2] = fmincon(@(x) IdentificationExperiment(x, theta0, signal_type,...
     metric_selector, 0), optimal_input, [], [], [], [], LB, UB, [], fmincon_opts);
 
-
 save('comb2modified_best.mat');
-
-return
-
-
-%%
-
-% x = [8.173686814228478,2.521058987690398e+02,20.019986773376180];
-% comb = 3
-% Unpack parameters
-switch comb
-
-    case 1 % LSW + RBS
-        t0 = 0;
-        K = optimal_input2(1);
-        tfin = optimal_input2(2);
-        f0 = optimal_input2(3);
-        ff = optimal_input2(4);
-        T = optimal_input2(5);
-
-        params.T = T;
-
-    case 2 % LSW + 3211
-
-        t0 = 0;
-        K = optimal_input2(1);
-        tfin = optimal_input2(2);
-        f0 = optimal_input2(3);
-        ff = optimal_input2(4);
-        N = optimal_input2(5);
-
-        params.N = N;
+completed_flag = 1;
 
 end
 
-% T = x(2);
+%% Input test and validation
 
-% signal_type = 4;
+if results_only == 1 || completed_flag == 1
+% Load and Assign optimal input combinations
+switch comb
 
-% Generate Input
-% params.t0 = t0;
-% params.tf = tf;
-% params.T = T;
+    case 1 % LSW + RBS
+        if ~exist('optimal_input', 'var')
+            % Achieved J =
+            optimal_input = [12.2709802456560, 297.115680758792, 0.144765478881002,	1.30758171976682, 3.10581101055947];
+        end
 
+        t0 = 0;
+        K = optimal_input(1);
+        tfin = optimal_input(2);
+        f0 = optimal_input(3);
+        ff = optimal_input(4);
+        T = optimal_input(5);
+
+        params.T = T;
+        signal_type = [1, 3];
+
+        % Percentage of time for the first signal type
+        params.tfrac = 0.5;
+
+    case 2 % LSW + 3211
+        if ~exist('optimal_input', 'var')
+            % Achieved J = 
+            optimal_input = [37.6897636715143	259.196074597491	0.196093750000000	1.00008907914162	1.00009547173977];
+        end
+
+        t0 = 0;
+        K = optimal_input(1);
+        tfin = optimal_input(2);
+        f0 = optimal_input(3);
+        ff = optimal_input(4);
+        N = optimal_input(5);
+
+        params.N = N;
+
+        signal_type = [1, 4];
+        % Percentage of time for the first signal type
+        params.tfrac = 0.5;
+
+    case 3 % Sine Sweep only
+        % Pameters: 1) K, 2) tf, 3) f0, 4) ff
+        if ~exist('optimal_input', 'var')
+            % Achieved J = 0.04486
+            optimal_input = [31.085075837497065, 2.564445630905003e+02, 0.195833893040528, 1];
+        end
+
+        t0 = 0;
+        K = optimal_input(1);
+        tfin = optimal_input(2);
+        f0 = optimal_input(3);
+        ff = optimal_input(4);
+
+        signal_type = 1;
+
+    case 4 % Linear Sine Sweep + 3211 (80/20)
+        if ~exist('optimal_input', 'var')
+            % Achieved J = 
+            optimal_input = [20.3173576999760	247.000135224483	0.0471025295387743	0.800061035156250	1];
+        end
+
+        % Pameters: 1) K, 2) tf, 3) f0, 4) ff, 5) N
+        t0 = 0;
+        K = optimal_input(1);
+        tfin = optimal_input(2);
+        f0 = optimal_input(3);
+        ff = optimal_input(4);
+        N = optimal_input(5);
+
+        params.N = N;
+        signal_type = [1, 4];
+        % Percentage of time for the first signal type
+        params.tfrac = 0.8;
+
+    case 5 % RBS
+        % Pameters: 1) K, 2) tf, 3) T
+        if ~exist('optimal_input', 'var')
+            % Achieved J = 
+            optimal_input = [14.3057893512984	295.401715933268	9.70215092871663];
+        end
+
+        signal_type = 3;
+
+    case 6 % 3211
+        % Pameters: 1) K, 2) tf, 3) N
+        if ~exist('optimal_input', 'var')
+            % Achieved J = 0.1079
+            optimal_input = [21.751767024881480, 2.842914704650040e+02, 2.368796254243542];
+        end
+        % NOTE: N is rounded before being used
+
+        t0 = 0;
+        K = optimal_input(1);
+        tfin = optimal_input(2);
+        N = optimal_input(3);
+
+        signal_type = 4;
+
+    case 7 % Doublet
+        % Pameters: 1) K, 2) tf, 3) N
+        if ~exist('optimal_input', 'var')
+            % Achieved J = 0.05704
+            optimal_input = [14.928329041074418, 2.714867292872423e+02, 2.239365007274643];
+        end
+
+        % NOTE: N is rounded before being used
+
+        t0 = 0;
+        K = optimal_input(1);
+        tfin = optimal_input(2);
+        N = optimal_input(3);
+
+        signal_type = 5;
+
+end
+
+%% OK UP TO HERE
 
 % Create params to test and retrieve theta vector
 params.ff = ff;
@@ -369,7 +442,8 @@ grid minor
 axis auto;
 legend();
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+end
 
 
 

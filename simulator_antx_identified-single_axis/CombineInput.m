@@ -1,10 +1,12 @@
 function [signal, timevec] = CombineInput(params, signal_type)
 
 % Check for fraction in params
-if isfield(params, 'tfrac')
+if isfield(params, 'tfrac') && length(signal_type) > 1
     tfrac = params.tfrac;
-else
+elseif length(signal_type) > 1
     tfrac = 0.5;
+else
+    tfrac = 1;
 end
 
 tf_mid = tfrac * params.tf;
