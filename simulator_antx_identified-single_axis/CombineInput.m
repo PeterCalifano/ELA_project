@@ -1,4 +1,4 @@
-function [signal, timevec] = CombineInput(params, signal_type)
+function [signal, timevec] = CombineInput(params, signal_type, amplitude)
 
 % Check for fraction in params
 if isfield(params, 'tfrac') && length(signal_type) > 1
@@ -7,6 +7,10 @@ elseif length(signal_type) > 1
     tfrac = 0.5;
 else
     tfrac = 1;
+end
+
+if nargin < 3
+   amplitude = ones(length(signal_type), 1);
 end
 
 tf_mid = tfrac * params.tf;
@@ -35,7 +39,7 @@ for input_type = signal_type
     idlast = idlast + length(signal_temp);
 
     timevec(idfirst:idlast, 1) = time_temp;
-    signal(idfirst:idlast, 1) = signal_temp;
+    signal(idfirst:idlast, 1) = amplitude(counter).*signal_temp;
 
     idfirst = idlast + 1;
 

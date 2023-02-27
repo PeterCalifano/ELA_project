@@ -58,15 +58,13 @@ for idp = 1:length(sigma)
         cell_param{idp}, bias_perc(idp));
 end
 
-% Load Validation signal
-
-% load('ValidationSignal.mat');
+% Generate Validation signal
 rng(1);
 params.dt = 0.001;
 params.f0 = 0;
-params.ff = 0.3;
+params.ff = 15;
 params.t0 = 0;
-params.tf = 20;
+params.tf = 150;
 
 [signal, timevec] = GenerateInput(params, 1);
 ExcitationM = [timevec, signal];
@@ -80,6 +78,7 @@ N_delay = 1;
 [Mtot_ref, ax_ref, q_ref, time_grid_ref, pitch_angle_ref] = OutputPreProcess(output, N_delay);
 
 clear output sim_obj
+
 % Get identified model output
 rng(1);
 sim_obj = SetModel(estimates, ExcitationM);
@@ -98,7 +97,6 @@ figure;
 plot(q);
 hold on;
 plot(q_ref);
-
 
 
 % Time-domain signals errors
@@ -123,7 +121,7 @@ axis auto;
 legend();
 
 
-% Frequency Responde with bode plots
+% Frequency Response with bode plots
 figure;
 w_axis = 0:0.05:(2*pi*100);
 bodeplot(Hmodelstruct(th_true), 'r-',...

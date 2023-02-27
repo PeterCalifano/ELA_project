@@ -1,15 +1,22 @@
-function [J, fitmodel, est_params, est_unc] = IdentificationExperiment(x, theta0, signal_type, metric_selector, display_flag)
+function [J, fitmodel, est_params, est_unc, dataset, excitation] = IdentificationExperiment(x, theta0, signal_type, metric_selector, display_flag, amplitude, tfrac)
 
 % Load input (reference) model
 load('input_workspace.mat')
 clear ExcitationM;
+
+if ~exist('amplitude', 'var')
+   amplitude = ones(length(signal_type), 1);
+end
 
 % Unpack parameters
 t0 = 0;
 K = x(1);
 tf = x(2);
 
-params.beta = 1.015; % Assumed
+if exist('tfrac', 'var')
+    params.tfrac = tfrac;
+end
+
 params.t0 = t0;
 params.tf = tf;
 params.dt = sample_time;
@@ -46,7 +53,7 @@ end
 
 try
 
-    [signal, timevec] = CombineInput(params, signal_type);
+    [signal, timevec] = CombineInput(params, signal_type, amplitude);
     ExcitationM = [timevec, signal];
 
     % Time grid
@@ -60,36 +67,26 @@ try
     sim_object = sim_object.setModelParameter('SimulationMode', 'accelerator');
 
     output = sim(sim_object);
+
     % Signals Pre-Processing
     N_delay = 1;
 
-    % Excit_signal = output.Excit_signal;
-
     % Extract useful input/output samples
     Mtot = output.Mtot;
-    time_grid = output.time_grid;
     ax = output.ax;
     q = output.q;
 
     % dt = 1/250; % 250 Hz, defined in parameters_controller
-    time_grid = time_grid((1+N_delay):end);
     % Consider delay of the output (4 samples)
     Mtot = Mtot(1:(end-N_delay));
     ax = ax((1+N_delay):end);
     q = q((1+N_delay):end);
 
-    % Model identification process
-%     Nsamples = length(time_grid);
-
-    %     [~, q_zm, ~] = AutoCorrEst(q, Nsamples);
-    %     [~, ax_zm, ~] = AutoCorrEst(ax, Nsamples);
-    %     [~, delta_zm, ~] = AutoCorrEst(Mtot, Nsamples);
-
+    %% Model identification process
     % Remove Mean from signals
     q_zm = q - mean(q);
     ax_zm = ax - mean(ax);
     delta_zm = Mtot - mean(Mtot);
-
 
     N_T = length(delta_zm);
 
@@ -102,20 +99,22 @@ try
     % Define data structure for greyest
     data_time = iddata([q_zm, ax_zm], delta_zm, sample_time);
     % Transform to frequency domain
-    data = fft(data_time); % frequency in rad/s
+    data = fft(data_time); 
 
-    % CHECK FREQUENCY AXIS and if FFT IS ONE OR TWO SIDED
     q_f = data.OutputData(:, 1);
     ax_f = data.OutputData(:, 2);
     delta_f = data.InputData;
+    % Frequency in Hz
     faxis = data.Frequency ./ (2*pi);
 
     if length(f_window) < 20 % Break cycle if window of available frequency is too narrow
+        warning('Frequency range with less than 20 samples');
         J = 1e10;
         return;
     end
 
     f_lb = f_window(1);
+    f_window = f_window(f_window <= 15);
     f_ub = f_window(end);
 
     id_f = faxis >= f_lb & faxis <= f_ub;
@@ -130,8 +129,19 @@ try
     model_fun = 'LongDyn_ODE';
     [fitmodel, est_params, est_unc] = greyest_wrapper(data_to_fit, model_fun, theta0, display_flag);
 
-    % Compute Objective function Cost
+    % Create output  if needed
+    if nargout > 4
+        dataset.data_time = data_time;
+        dataset.output = output;
+        dataset.data_to_fit = data_to_fit;
+        if nargout > 5
+            time_grid = output.time_grid;
+            Excit_signal = output.Excit_signal(1: (end-N_delay) );
+            excitation = [time_grid((1+N_delay):end), Excit_signal];
+        end
+    end
 
+    % Compute Objective function Cost
     switch metric_selector
         case 1
             J = sum(est_unc.^2);
@@ -140,8 +150,7 @@ try
         case 3
             J = det(diag(est_unc.^2));
         case 4
-            J = sum((est_unc./est_params).^2);
-       
+            J = sum((est_unc./est_params).^2);   
     end
 
 catch

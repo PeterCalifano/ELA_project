@@ -67,7 +67,7 @@ switch comb
 
         signal_type = 1;
         params.K = K;
-        params.t0 = 0;
+        params.t0 = t0;
         params.tf = tfin;
         params.f0 = f0;
         params.ff = ff;

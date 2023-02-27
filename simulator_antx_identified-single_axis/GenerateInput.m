@@ -49,12 +49,8 @@ switch signal_type
     case 3 % Pseudo Random Binary Sequence
         t0 = params.t0;
         T = params.T;
-
-        %         if isfield(params, 'dt')
-        %             dt = params.dt;
-        %         else
         dt = T/200;
-        %         end
+     
 
         tf = params.tf;
         timevec = 0:dt:(tf-t0);
@@ -85,7 +81,6 @@ switch signal_type
         end
 
         timevec = timevec + t0;
-        signal = signal.* 0.5;
 
     case 4 % 3211 sequence
 %         t0 = params.t0;
@@ -130,8 +125,7 @@ switch signal_type
 
         timevec = timevec + t0;
         timevec = timevec(timevec <= tf);
-        signal = signal(timevec <= tf).*0.75;
-
+        signal = signal(timevec <= tf);
 
     case 5 % Doublet
 
@@ -167,9 +161,6 @@ switch signal_type
         if nargout > 1
             timevec = linspace(0, (3*N+1)*TU, length(signal));
         end
-
-        signal = signal.*0.75;
-
 
 end
 

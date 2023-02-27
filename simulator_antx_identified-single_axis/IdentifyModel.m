@@ -37,7 +37,7 @@ switch method
         f_window = f1(cohr1 > 0.6 & cohr2 > 0.6);
         
         f_lb = f_window(1);
-        f_window = f_window(f_window <= 10);
+        f_window = f_window(f_window <= 15);
         f_ub = f_window(end);
 
         xline(f_lb, 'k--', num2str(f_lb) + " Hz", 'LineWidth', 1.04, 'FontSize', 12, ...

@@ -25,11 +25,11 @@ set(groot, 'defaulttextinterpreter', 'latex');
 set(0, 'defaultAxesFontSize', DefaultFontSize);
 
 rng default;
-
+task = 2; % Select task 1 (Identify) or 2 (Optimize)
 
 %% Model parameters
-% Initial model (state: longitudinal velocity, pitch rate, pitch angle; input: normalised pitching moment; outputs: state and longitudinal acceleration)
- 
+% Initial model (State: longitudinal velocity, pitch rate, pitch angle;
+% Input: normalised pitching moment excitation; Output: pitch rate and longitudinal acceleration)
 % Derivative of udot wrt u
 Xu = -0.1068;
 % Derivative of udot wrt q
@@ -111,85 +111,88 @@ if exist('/slprj', 'dir')
     rmdir('slprj', 's')                                                    
 end
 
-%% Signals Pre-Processing
-N_delay = 1;
+if task == 1
+    %% Signals Pre-Processing
+    N_delay = 1;
 
-time_grid = output.time_grid;
-CutInputMask = time_grid >= 23 & time_grid <= 100;
+    time_grid = output.time_grid;
+    CutInputMask = time_grid >= 23 & time_grid <= 100;
 
-% Extract useful input/output samples 
-Excit_signal = output.Excit_signal(CutInputMask);
-Mtot = output.Mtot(CutInputMask);
-ax = output.ax(CutInputMask);
-q = output.q(CutInputMask);
-time_grid = time_grid(CutInputMask);
+    % Extract useful input/output samples
+    Excit_signal = output.Excit_signal(CutInputMask);
+    Mtot = output.Mtot(CutInputMask);
+    ax = output.ax(CutInputMask);
+    q = output.q(CutInputMask);
+    time_grid = time_grid(CutInputMask);
 
-% dt = 1/250; % 250 Hz, defined in parameters_controller
-% Consider delay of the output (1 samples): shift of I/O signals
-time_grid = time_grid((1+N_delay):end);
-Excit_signal = Excit_signal(1:(end-N_delay));
-Mtot = Mtot(1:(end-N_delay));
-ax = ax((1+N_delay):end);
-q = q((1+N_delay):end);
+    % dt = 1/250; % 250 Hz, defined in parameters_controller
+    % Consider delay of the output (1 samples): shift of I/O signals
+    time_grid = time_grid((1+N_delay):end);
+    Excit_signal = Excit_signal(1:(end-N_delay));
+    Mtot = Mtot(1:(end-N_delay));
+    ax = ax((1+N_delay):end);
+    q = q((1+N_delay):end);
 
-%% Input and Output signals plot
+    %% Input and Output signals plot
 
-figure;
-plot(time_grid, Mtot, '-', 'LineWidth', 1.02);
-hold on;
-plot(time_grid, Excit_signal, '-', 'LineWidth', 1.05)
-xlabel('Time [s]');
-ylabel('Signal Amplitude [-]')
-% Default options
-grid minor
-axis auto
-ax_gca = gca;
-ax_gca.XAxisLocation = 'bottom';
-ax_gca.YAxisLocation = 'left';
-ax_gca.XMinorTick = 'on';
-ax_gca.YMinorTick = 'on';
-ax_gca.LineWidth = 1.04;
-hold off;
-legend('Excitation signal', 'Input torque')
+    figure;
+    plot(time_grid, Mtot, '-', 'LineWidth', 1.02);
+    hold on;
+    plot(time_grid, Excit_signal, '-', 'LineWidth', 1.05)
+    xlabel('Time [s]');
+    ylabel('Amplitude')
+    title('Normalized excitation signal and Input torque (CL)')
+    % Default options
+    grid minor
+    axis auto
+    ax_gca = gca;
+    ax_gca.XAxisLocation = 'bottom';
+    ax_gca.YAxisLocation = 'left';
+    ax_gca.XMinorTick = 'on';
+    ax_gca.YMinorTick = 'on';
+    ax_gca.LineWidth = 1.04;
+    legend('Excitation signal', 'Input torque')
+    hold off;
 
-figure;
-plot(time_grid, ax, '-', 'LineWidth', 1.02);
-xlabel('Time [s]');
-ylabel('Longitudinal acceleration [$m/s^2$]')
-% Default Options
-grid minor
-axis auto
-ax_gca = gca;
-ax_gca.XAxisLocation = 'bottom';
-ax_gca.YAxisLocation = 'left';
-ax_gca.XMinorTick = 'on';
-ax_gca.YMinorTick = 'on';
-ax_gca.LineWidth = 1.04;
-hold off;
 
-figure;
-plot(time_grid, rad2deg(q), '-', 'LineWidth', 1.02);
-xlabel('Time [s]')
-ylabel('Pith rate q [deg/s]');
-% Default Options
-grid minor
-axis auto
-ax_gca = gca;
-ax_gca.XAxisLocation = 'bottom';
-ax_gca.YAxisLocation = 'left';
-ax_gca.XMinorTick = 'on';
-ax_gca.YMinorTick = 'on';
-ax_gca.LineWidth = 1.04;
-hold off;
+    figure;
+    plot(time_grid, ax, '-', 'LineWidth', 1.02);
+    xlabel('Time [s]');
+    ylabel('Acceleration [$m/s^2$]')
+    title('Output Longitudinal acceleration $a_x$ time series')
+    % Default Options
+    grid minor
+    axis auto
+    ax_gca = gca;
+    ax_gca.XAxisLocation = 'bottom';
+    ax_gca.YAxisLocation = 'left';
+    ax_gca.XMinorTick = 'on';
+    ax_gca.YMinorTick = 'on';
+    ax_gca.LineWidth = 1.04;
+    hold off;
 
-% Call script for Model Identification
-run('IdentifyModel');
-clear;
+    figure;
+    plot(time_grid, rad2deg(q), '-', 'LineWidth', 1.02);
+    xlabel('Time [s]')
+    ylabel('Pith rate q [deg/s]');
+    title('Output Pitch rate q time series')
+    % Default Options
+    grid minor
+    axis auto
+    ax_gca = gca;
+    ax_gca.XAxisLocation = 'bottom';
+    ax_gca.YAxisLocation = 'left';
+    ax_gca.XMinorTick = 'on';
+    ax_gca.YMinorTick = 'on';
+    ax_gca.LineWidth = 1.04;
+    hold off;
 
-return
-% Call script for Optimization of the input signal
-run('OptimizeIdentification.m');
-
+    % Call script for Model Identification
+    run('IdentifyModel');
+elseif task == 2
+    % Call script for Optimization of the input signal
+    run('OptimizeIdentification.m');
+end
 %% END OF CODE
 
 
