@@ -25,7 +25,6 @@ set(groot, 'defaulttextinterpreter', 'latex');
 set(0, 'defaultAxesFontSize', DefaultFontSize);
 
 rng default;
-task = 2; % Select task 1 (Identify) or 2 (Optimize)
 
 %% Model parameters
 % Initial model (State: longitudinal velocity, pitch rate, pitch angle;
@@ -73,7 +72,7 @@ noise.Enabler = 1;
 
 noise.pos_stand_dev = noise.Enabler * 0.0011;                            	%[m]
 
-noise.vel_stand_dev = noise.Enabler * 0.01;                                %[m/s]
+noise.vel_stand_dev = noise.Enabler * 0.01;                                % [m/s]
 
 noise.attitude_stand_dev = noise.Enabler * deg2rad(0.0076);                 %[rad]
 noise.ang_rate_stand_dev = noise.Enabler * deg2rad(0.01);                   %[rad/s]
@@ -102,7 +101,7 @@ decimation = 1; % [s]
 
 % Simulate system and save output
 output = sim(model_name, 'TimeOut', simulation_time);
-save('simout.mat', "output");
+% save('simout.mat', "output");
 
 
 %% Delete temporary files
@@ -110,6 +109,10 @@ save('simout.mat', "output");
 if exist('/slprj', 'dir')
     rmdir('slprj', 's')                                                    
 end
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% Project code - Califano, Piazza
+task = 1; % Select task 1 (Identify) or 2 (Optimize)
 
 if task == 1
     %% Signals Pre-Processing
@@ -151,7 +154,7 @@ if task == 1
     ax_gca.XMinorTick = 'on';
     ax_gca.YMinorTick = 'on';
     ax_gca.LineWidth = 1.04;
-    legend('Excitation signal', 'Input torque')
+    legend('Input torque', 'Excitation signal')
     hold off;
 
 
