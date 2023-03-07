@@ -1,21 +1,24 @@
 function [fitmodel, est_params, est_unc] = greyest_wrapper(data_to_fit, model_fun, theta0, display_flag)
 %% PROTOTYPE
+% [fitmodel, est_params, est_unc] = greyest_wrapper(data_to_fit, model_fun, theta0, display_flag)
 % -------------------------------------------------------------------------------------------------------------
 %% DESCRIPTION
-% What the function does
+% Wrapper function to call greyest()
 % -------------------------------------------------------------------------------------------------------------
 %% INPUT
-% in1 [dim] description
+% data_to_fit: [iddata object] dataset passed to greyest() for the identification
+% model_fun: function returning the state space model of the system
+% theta0: [6x1] initial guess of the parameters vector
+% display_flag: [bool] 0: Do not show iterations, 1: Show iterations
 % -------------------------------------------------------------------------------------------------------------
 %% OUTPUT
-% out1 [dim] description
+% fitmodel: [idgrey object] fitted model returned by greyest()
+% est_params: [6x1] estimated parameters vector
+% est_unc: [6x1] 1sigma standard deviation expressing the estimate uncertainty
 % -------------------------------------------------------------------------------------------------------------
 %% CHANGELOG
-% Date, User, brief summary of the modification
+% 07-03-2023    Pietro Califano     Function documented
 % -------------------------------------------------------------------------------------------------------------
-%% DEPENDENCIES
-% -------------------------------------------------------------------------------------------------------------
-%% Future upgrades
 
 
 %% Function code

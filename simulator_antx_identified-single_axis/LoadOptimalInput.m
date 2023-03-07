@@ -1,4 +1,30 @@
 function [optimal_input, signal_type, params] = LoadOptimalInput(comb, sample_time, optimal_input)
+%% PROTOTYPE
+% [optimal_input, signal_type, params] = LoadOptimalInput(comb, sample_time, optimal_input)
+% -------------------------------------------------------------------------------------------------------------
+%% DESCRIPTION
+% Function storing the best combination found for the parameters defining
+% the inputs to the system plant
+% -------------------------------------------------------------------------------------------------------------
+%% INPUT
+% comb: [1] Number identifying the combination: 
+%           1) LSW + RBS, 2) LSW + 3211, 3) Sine Sweep only, 4) Linear Sine Sweep + 3211 (80/20)
+%           5) RBS, 6) 3211, 7) Doublet
+% sample_time: [1] sample time to generate the signal
+% optimal_input: [variable number]  optimal combination of parameters as
+%                returned by the optimization cycle
+% -------------------------------------------------------------------------------------------------------------
+%% OUTPUT
+% optimal_input: input signal defined by the parameters
+% signal_type: [1] number identifying the signal type as defined in GenerateInput()
+% -------------------------------------------------------------------------------------------------------------
+%% CHANGELOG
+% 07-03-2023    Pietro Califano     Function documented
+% -------------------------------------------------------------------------------------------------------------
+
+
+%% Function code
+
 switch comb
 
     case 1 % LSW + RBS

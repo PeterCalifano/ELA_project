@@ -1,11 +1,11 @@
 %% Options
-
 % 0: MATLAB greyest, 1: K-W for PSD --> optim_method
 method = 0;
 
 % 0: MATLAB greyest or 1: Newton-Raphson
 optim_method = 0;
 
+% Get number of samples
 Nsamples = length(time_grid);
 
 %% AutoCorrelation fcn estimation
@@ -15,7 +15,7 @@ Nsamples = length(time_grid);
 
 switch method
 
-    case 0 % MATLAB Built-in Greyest identification
+    case 0 % MATLAB Built-in Greyest identification (working)
 
         %% Compute and remove mean
         N = length(delta_zm);
@@ -112,8 +112,8 @@ switch method
         [model, theta, est_unc] = greyest_wrapper(data_to_fit, model_fun, theta0, 0);
         
     case 1
-
-        % Call script to estimate FRF of the system by K-W Theory (PSD)
+        warning('Case (using estimated FRF) not working')
+        % Call script to estimate FRF of the system by FRF estimator through PSD
         EstimateFRF; % Output: H_est, faxis_masked
         whos H_est;
 
@@ -290,7 +290,7 @@ fprintf("\nIdentified model parameters and relative 3-sigma uncertainty (Gaussia
 
 %% Bodeplots of TFs (greyest, spafdr, estimator)
 % TF obtained with MATLAB function with greyest identified parameters (a)
-[Ai, Bi, Ci, Di] = LongDyn_ODE(theta(1), theta(2), theta(3), theta(4),theta(5), theta(6));
+[Ai, Bi, Ci, Di] = LongDyn_ODE(theta(1), theta(2), theta(3), theta(4), theta(5), theta(6));
 SS_model = ss(Ai, Bi, Ci, Di);
 TF_model = tf(SS_model);
 % TF estimated with spafdr from measurement data with MATLAB function
@@ -313,13 +313,14 @@ legend_cell = {'greyest model', 'spafdr()', 'FRF estimator', '', ''};
 
 % TF: delta --> q (1) and delta --> ax (2)
 for id = 1:2
-figure;
-% Magnitude plots
-subplot(2, 1, 1);
-semilogx(w_out, squeeze(mag_a(id, 1, :)), '-', 'LineWidth', 1.05, 'DisplayName', 'greyest model');
-hold on;
-semilogx(w_out, squeeze(mag_b(id, 1, :)), '-', 'LineWidth', 1.05, 'DisplayName', 'spafdr()');
-semilogx(w_axis, 20*log10(abs(H_hat(:, id))), '-', 'LineWidth', 1.05, 'DisplayName', 'FRF estimator');
+    figure;
+    % Magnitude plots
+    subplot(2, 1, 1);
+    semilogx(w_out, 20*log10(squeeze(mag_a(id, 1, :))), '-', 'LineWidth', 1.05, 'DisplayName', 'greyest model');
+    hold on;
+    semilogx(w_out, 20*log10(squeeze(mag_b(id, 1, :))), '-', 'LineWidth', 1.05, 'DisplayName', 'spafdr()');
+    semilogx(w_axis, 20*log10(abs(H_hat(:, id))), '-', 'LineWidth', 1.05, 'DisplayName', 'FRF estimator');
+
 
 xlabel('Frequency [rad/s]')
 ylabel('Magnitude [dB]')
@@ -347,7 +348,7 @@ subplot(2, 1, 2);
 semilogx(w_out, (squeeze(phase_a(id, 1, :))), '-', 'LineWidth', 1.05, 'DisplayName', 'greyest model');
 hold on;
 semilogx(w_out, (squeeze(phase_b(id, 1, :))), '-', 'LineWidth', 1.05, 'DisplayName', 'spafdr');
-semilogx(w_axis, rad2deg(angle(H_hat(:, id))), '-', 'LineWidth', 1.05, 'DisplayName', 'FRF estimator');
+semilogx(w_axis, wrapTo180(rad2deg(angle(H_hat(:, id)))), '-', 'LineWidth', 1.05, 'DisplayName', 'FRF estimator');
 yline(-180, 'k--',  '-180°', 'FontSize', 12, 'LineWidth', 1.03, 'LabelHorizontalAlignment', 'Left');
 yline(+180, 'k--',  '+180°', 'FontSize', 12, 'LineWidth', 1.03, 'LabelHorizontalAlignment', 'Left', 'LabelVerticalAlignment', 'bottom');
 
@@ -405,10 +406,10 @@ hold off;
 % 3b) Pole-Zero with uncertainty interval
 pfig = figure;
 pz_plot = iopzplot(model);
-showConfidence(pz_plot, 3)
+% showConfidence(pz_plot, 3)
 hold on;
 
-title('Poles/Zeros of $[H_{\delta q}; H_{\delta a_x}]$ with 3$\sigma$ confidence interval',...
+title('Poles/Zeros of $[H_{\delta q}; H_{\delta a_x}]$',...
     'Interpreter', 'Latex');
 % Default options applied to all axes handles
 axes_handles = findall(pfig, 'type', 'axes');
@@ -419,7 +420,7 @@ hold off;
 
 %% MCM to assess uncertainty space
 % Assume Gaussian distribution
-N_samples = 10;
+N_samples = 100;
 C = diag(est_unc.^2);
 % Sample uncertain parameter space
 Theta_sampled = mvnrnd(theta, C, N_samples)';
@@ -441,12 +442,12 @@ unc_sys = ss(A_unc, B_unc, C_unc, D_unc);
 unc_sys.u = 'M';
 unc_sys.y = {'q','ax'};
 
-waxis = 0:0.5:150;
+waxis = 0:0.1:150;
 bode_MCM = figure;
-nominalbode = bodeplot(model, '.-b', waxis); 
-showConfidence(nominalbode, 3);
-hold on;
 bodeplot(unc_sys, 'k-', waxis); 
+hold on;
+nominalbode = bodeplot(model, '-b', waxis); 
+showConfidence(nominalbode, 3);
 title('MCM Bode diagrams of $[H_{\delta q}; H_{\delta a_x}]$',...
     'Interpreter', 'Latex');
 % Default options applied to all axes handles
@@ -454,13 +455,13 @@ axes_handles = findall(bode_MCM, 'type', 'axes');
 set(axes_handles, 'YMinorTick', 'on', 'XMinorTick', 'on', 'LineWidth', 1.04, ...
     'XMinorGrid', 'on', 'YMinorGrid', 'on');
 hold off;
-legend('Nominal identified model', 'Uncertain models', 'Location', 'best')
+legend('Uncertain models', 'Nominal identified model', 'Location', 'best')
 
 pfig_MCM = figure;
-nominalpz = iopzplot(model, 'r*'); 
-% showConfidence(nominalpz, 3);
+iopzplot(unc_sys, 'k');
 hold on;
-iopzplot(unc_sys, 'k'); 
+nominalpz = iopzplot(model, 'b'); 
+% showConfidence(nominalpz, 3);
 title('MCM Poles/Zeros of $[H_{\delta q}; H_{\delta a_x}]$',...
     'Interpreter', 'Latex');
 % Default options applied to all axes handles
@@ -468,7 +469,7 @@ axes_handles = findall(pfig_MCM, 'type', 'axes');
 set(axes_handles, 'YMinorTick', 'on', 'XMinorTick', 'on', 'LineWidth', 1.04, ...
     'XMinorGrid', 'on', 'YMinorGrid', 'on');
 hold off;
-legend('Nominal identified model', 'Uncertain models', 'Location', 'best')
+legend('Uncertain models', 'Nominal identified model', 'Location', 'best')
 
 
 

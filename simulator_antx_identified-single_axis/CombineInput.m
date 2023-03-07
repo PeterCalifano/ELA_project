@@ -1,5 +1,36 @@
 function [signal, timevec] = CombineInput(params, signal_type, amplitude)
+%% PROTOTYPE
+% [signal, timevec] = CombineInput(params, signal_type, amplitude)
+% -------------------------------------------------------------------------------------------------------------
+%% DESCRIPTION
+% Wrapper of GenerateInput()
+% Generates input signals and combines them (up to 2 different types) such
+% that the total signal has duration tf, of which the first covers tfrac % 
+% of the time. For Linear Sine Sweep, f0 and ff determines the bandwith. T
+% determines the minimum time for which a level is maintained in the RBS, N
+% is the number of repetitions for 3211 and Doublet.
+% -------------------------------------------------------------------------------------------------------------
+%% INPUT
+% params: [struct] with variable fields: t0, tf, f0, ff, dt, T, N, tfrac. 
+% signal_type: scalar or [2x1] vector specifying the type of signal
+%              1) Linear Sine Sweep, 2) Logarithmic Sine Sweep
+%              3) Random Binary Sequence, 4) 3211 sequence, 5) Doublet
+% amplitude: scalar or [2x1] specifying the scaling factor of the
+%            amplitude. (default = 1)
+% -------------------------------------------------------------------------------------------------------------
+%% OUTPUT
+% signal: [N_instants x 1] generated signal, with length given as
+% N_instants = ceil(tf - t0)/dt 
+% timevec: [N_instants x 1] timegrid on which the signal is generated
+% -------------------------------------------------------------------------------------------------------------
+%% CHANGELOG
+% 07-03-2023    Pietro Califano     Function documented
+% -------------------------------------------------------------------------------------------------------------
+%% DEPENDENCIES
+% GenerateInput() function
+% -------------------------------------------------------------------------------------------------------------
 
+%% Function code
 % Check for fraction in params
 if isfield(params, 'tfrac') && length(signal_type) > 1
     tfrac = params.tfrac;

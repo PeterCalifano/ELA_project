@@ -1,19 +1,29 @@
 function [signal, timevec, f_signal, S] = GenerateInput(params, signal_type)
 %% PROTOTYPE
+% [signal, timevec] = GenerateInput(params, signal_type)
 % -------------------------------------------------------------------------------------------------------------
 %% DESCRIPTION
-% What the function does
+% Generates input signals and combines them (up to 2 different types) such
+% that the total signal has duration tf, of which the first covers tfrac % 
+% of the time. For Linear Sine Sweep, f0 and ff determines the bandwith. T
+% determines the minimum time for which a level is maintained in the RBS, N
+% is the number of repetitions for 3211 and Doublet.
 % -------------------------------------------------------------------------------------------------------------
 %% INPUT
-% in1 [dim] description
+% params: [struct] with variable fields: t0, tf, f0, ff, dt, T, N, tfrac. 
+% signal_type: scalar specifying the type of signal
+%              1) Linear Sine Sweep, 2) Logarithmic Sine Sweep
+%              3) Random Binary Sequence, 4) 3211 sequence, 5) Doublet
+% amplitude: scalar specifying the scaling factor of the
+%            amplitude. (default = 1)
 % -------------------------------------------------------------------------------------------------------------
 %% OUTPUT
-% out1 [dim] description
+% signal: [N_instants x 1] generated signal, with length given as
+% N_instants = ceil(tf - t0)/dt 
+% timevec: [N_instants x 1] timegrid on which the signal is generated
 % -------------------------------------------------------------------------------------------------------------
 %% CHANGELOG
-% Date, User, brief summary of the modification
-% -------------------------------------------------------------------------------------------------------------
-%% DEPENDENCIES
+% 07-03-2023    Pietro Califano     Function documented
 % -------------------------------------------------------------------------------------------------------------
 %% Future upgrades
 
@@ -50,7 +60,6 @@ switch signal_type
         t0 = params.t0;
         T = params.T;
         dt = T/200;
-     
 
         tf = params.tf;
         timevec = 0:dt:(tf-t0);
@@ -93,9 +102,6 @@ switch signal_type
         TU = (tf-t0)./(8*N);
         tunit_length = floor(TU./dt); % N° of time instants in 1 time unit
         
-        % Build signal_unit
-%         timeaxis = linspace(0, 8*TU, tunit_length);
-
         % No input up to 1 TU
         signal_unit(1:tunit_length) = 0; %zeros(tunit_length, 1);
         % HIGH for 3 TU
@@ -109,7 +115,7 @@ switch signal_type
 
         signal_unit = signal_unit';
         
-        
+    
         % Concatenate N signals
         signal = repmat(signal_unit, N, 1);
         zero_unit = zeros(tunit_length, 1);
@@ -137,9 +143,6 @@ switch signal_type
         TU = tf./(3*N);
         tunit_length = floor(TU./dt); % N° of time instants in 1 time unit
         
-        % Build signal_unit
-%         timeaxis = linspace(0, 3*TU, tunit_length);
-
         % No input up to 1 TU
         signal_unit(1:tunit_length) = 0; %zeros(tunit_length, 1);
         % LOW for 1 TU

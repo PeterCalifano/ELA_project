@@ -112,7 +112,9 @@ end
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% Project code - Califano, Piazza
-task = 1; % Select task 1 (Identify) or 2 (Optimize)
+task = 2; % Select task 1 (Identify) or 2 (Optimize)
+% NOTE: Simulator ToWorkspace blocks must have "sample_time" set as Sample
+% Time parameter
 
 if task == 1
     %% Signals Pre-Processing

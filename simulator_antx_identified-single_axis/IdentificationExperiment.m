@@ -1,5 +1,39 @@
 function [J, fitmodel, est_params, est_unc, dataset, excitation] = IdentificationExperiment(x, theta0, signal_type, metric_selector, display_flag, amplitude, tfrac)
+%% PROTOTYPE
+% [J, fitmodel, est_params, est_unc, dataset, excitation] = IdentificationExperiment(x, theta0, signal_type, metric_selector, display_flag, amplitude, tfrac)
+% -------------------------------------------------------------------------------------------------------------
+%% DESCRIPTION
+% Function used as "cost function" for the optimization. It executes the
+% entire "identification experiment" from dataset generation from the
+% input, pre-processing the signal, performing identification and computing
+% the cost selected by metric_selector
+% -------------------------------------------------------------------------------------------------------------
+%% INPUT
+% x: [variable] Vector of decision variables
+% theta0: [6x1] Initial guess of the parameters to identify
+% signal_type: [scalar] or [2x1] specifying the signal types
+% metric_selector: [scalar] integer specifying the cost index
+% display_flag: [bool] 0: No display from greyest(), 1: Display iteration
+% amplitude: [scalar] or [2x1] amplitude factors for the signals (default = 1)
+% tfrac: [scalar] percentage of total duration covered by the first signal 
+%        if combination with 2 types is selected
+% -------------------------------------------------------------------------------------------------------------
+%% OUTPUT
+% J: [scalar] value of the cost function
+% fitmodel: [idgrey object] fitted model returned by greyest()
+% est_params: [6x1] estimated parameters vector
+% est_unc: [6x1] 1sigma standard deviation expressing the estimate uncertainty
+% dataset: [iddata object] containing the dataset used for the identification
+% excitation: excitation signal used for the identification
+% -------------------------------------------------------------------------------------------------------------
+%% CHANGELOG
+% 07-03-2023    Pietro Califano     Function documented
+% -------------------------------------------------------------------------------------------------------------
+%% DEPENDENCIES
+% CombineInput(), Simulator Simulink Model, GenerateInput()
+% -------------------------------------------------------------------------------------------------------------
 
+%% Function code
 % Load input (reference) model
 load('input_workspace.mat')
 clear ExcitationM;

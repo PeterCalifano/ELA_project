@@ -1,22 +1,22 @@
 function [R_xx, signal_zm, signal_mean] = AutoCorrEst(signal, Nsamples)
 %% PROTOTYPE
-% [R_xx, signal_zm] = AutoCorrEst(signal, Nsamples);
+% [R_xx, signal_zm, signal_mean] = AutoCorrEst(signal, Nsamples)
 % -------------------------------------------------------------------------------------------------------------
 %% DESCRIPTION
-% What the function does
+% Function estimating the Autocorrelation function of the input signal with
+% number of samples given by Nsamples.
 % -------------------------------------------------------------------------------------------------------------
 %% INPUT
-% in1 [dim] description
+% signal [Nsamples x 1]: signals of which to compute the autocorrelation
 % -------------------------------------------------------------------------------------------------------------
 %% OUTPUT
-% out1 [dim] description
+% R_xx: [Nsamples x 1]: estimated autocorrelation function
+% signal_zm: [Nsamples x 1]: zero mean signal
+% signal_mean: [1]: estimated mean of the signal
 % -------------------------------------------------------------------------------------------------------------
 %% CHANGELOG
-% Date, User, brief summary of the modification
+% 07-03-2023    Pietro Califano     First version
 % -------------------------------------------------------------------------------------------------------------
-%% DEPENDENCIES
-% -------------------------------------------------------------------------------------------------------------
-%% Future upgrades
 
 
 %% Function code

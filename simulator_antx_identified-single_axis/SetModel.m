@@ -1,14 +1,27 @@
-function sim_object = SetModel(theta, ExcitationM)
+function sim_object = SetModel(theta, ExcitationM, noise_flag)
 
+% Function to set the Simulation object to execute simulations
 model_name = 'Simulator_Single_Axis';
 % Time grid
 t = ExcitationM(:, 1);
 simulation_time = t(end) - t(1);
 
-% Simulate system
+if exist('noise_flag', 'var')
+    noise.Enabler = noise_flag;
+    noise.pos_stand_dev = noise.Enabler * 0.0011;                            	% [m]
+    noise.vel_stand_dev = noise.Enabler * 0.01;                                 % [m/s]
+    noise.attitude_stand_dev = noise.Enabler * deg2rad(0.0076);                 % [rad]
+    noise.ang_rate_stand_dev = noise.Enabler * deg2rad(0.01);                   % [rad/s]
+else
+    % Do nothing
+    noise.Enabler = 1;
+    noise.pos_stand_dev = noise.Enabler * 0.0011;                            	% [m]
+    noise.vel_stand_dev = noise.Enabler * 0.01;                                 % [m/s]
+    noise.attitude_stand_dev = noise.Enabler * deg2rad(0.0076);                 % [rad]
+    noise.ang_rate_stand_dev = noise.Enabler * deg2rad(0.01);                   % [rad/s]
+end
 
-% [A, B, C, D] = LongDyn_ODE(theta(1), theta(2), theta(3), theta(4), theta(5), theta(6));
-
+% Determine State space model
 Xu = theta(1);
 Mu = theta(2);
 Xq = theta(3);
@@ -43,6 +56,6 @@ sim_object = setVariable(sim_object, 'A', A);
 sim_object = setVariable(sim_object, 'B', B);
 sim_object = setVariable(sim_object, 'C', C);
 sim_object = setVariable(sim_object, 'D', D);
-
+sim_object = setVariable(sim_object, 'noise', noise);
 
 end

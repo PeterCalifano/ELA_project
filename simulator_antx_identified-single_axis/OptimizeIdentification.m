@@ -6,6 +6,7 @@ end
 
 %% Experiment optimization
 theta0 = th_true.*[1.2 1.1 0.8 1.1 0.7 1.1];
+% theta0 = th_true.*[-3.5 1.6 -0.1 -0.5 1.4 3];
 
 comb = 2;
 completed_flag = 0;
@@ -92,10 +93,10 @@ switch comb
 end
 
 if results_only == 0 
-% x0 = [8, 295, 0.02, 50];
-% x0 = [8,295,20];
-metric_selector = 1;
 
+metric_selector = 1; % sort of trace of M^-1
+
+% Test initial cost
 J = IdentificationExperiment(x0, theta0, signal_type, metric_selector, 1);
 disp("Initial J cost: " + num2str(J));
 
@@ -117,10 +118,10 @@ ga_opts = optimoptions("ga", "Display", 'iter', 'CrossoverFraction', 0.7, ...
 [optimal_input] = ga(@(x) IdentificationExperiment(x, theta0, signal_type,...
     metric_selector, 0), length(LB), [], [], [], [], LB, UB, [], [], ga_opts);
 
-[optimal_input2] = fmincon(@(x) IdentificationExperiment(x, theta0, signal_type,...
-    metric_selector, 0), optimal_input, [], [], [], [], LB, UB, [], fmincon_opts);
+% [optimal_input2] = fmincon(@(x) IdentificationExperiment(x, theta0, signal_type,...
+%     metric_selector, 0), optimal_input, [], [], [], [], LB, UB, [], fmincon_opts);
 
-save('comb2modified_best.mat');
+% save('comb2modified_best.mat');
 completed_flag = 1;
 
 end
@@ -153,6 +154,8 @@ elseif results_only == 1 && completed_flag == 0
     comb_signals_plot = figure;
     counter_comb = 1;
     counter_basic = 1;
+
+    % Simulate, get results and plot
     for id = 1:7
 
         rng default;
@@ -172,6 +175,7 @@ elseif results_only == 1 && completed_flag == 0
                 theta0, signal_type{id}, metric_selector, display_flag, amplitudes_cell{id});
         end
 
+        % Evaluate estimation error
         est_err(:, id) = abs(th_true' - est_params{id});
 
 
@@ -229,6 +233,7 @@ elseif results_only == 1 && completed_flag == 0
     sigma = est_unc{minpos};
     estimates = est_params{minpos};
 
+    % Display results
     disp('-------- Best Input results --------')
     fprintf("\n Parameters and relative 3-sigma uncertainty (Gaussian distr. assumption)" + ...
         "\nXu = %3.3g\t 3sig%%: %3.3g" + ...
@@ -262,46 +267,80 @@ elseif results_only == 1 && completed_flag == 0
 
 %% Identified model validation
 %% Simulate reference model
-load('input_workspace.mat')
-clear ExcitationM
+load('input_workspace.mat') 
+clear ExcitationM noise
 
+decimation = 1;
 % Generate Validation signal
-rng(1);
-params.dt = 0.001;
-params.f0 = 0;
-params.ff = 15;
-params.t0 = 0;
+rng(10);
+noise_flag = 1;
+
+params.dt = 0.005;
 params.tf = 150;
+params.f0 = 1/150;
+params.ff = 10;
+params.t0 = 0;
+amplitude = 1;
 
 [validation_signal, validation_timevec] = GenerateInput(params, 1);
-ExcitationM = [validation_timevec, validation_signal];
+ExcitationM = [validation_timevec, amplitude.*validation_signal];
+
+figure;
+plot(validation_timevec, validation_signal, 'k-', 'LineWidth', 0.5);
+hold on;
+xlabel('Time [s]');
+ylabel('Amplitude')
+title('Validation signal')
+% Default options
+grid minor
+axis auto
+ax_gca = gca;
+ax_gca.XAxisLocation = 'bottom';
+ax_gca.YAxisLocation = 'left';
+ax_gca.XMinorTick = 'on';
+ax_gca.YMinorTick = 'on';
+ax_gca.LineWidth = 1.04;
+hold off;
 
 % Get reference output
-sim_obj = SetModel(th_true, ExcitationM);
+sim_obj = SetModel(th_true, ExcitationM, noise_flag);
 output = sim(sim_obj);
 
 % Signals Pre-Processing
 N_delay = 1;
-[Mtot_cell{1}, ax_cell{1}, q_cell{1}, time_grid_cell{1}, pitch_angle_cell{1}] = OutputPreProcess(output, N_delay);
+[Mtot, ax, q, time_grid, pitch_angle] = OutputPreProcess(output, N_delay);
+
+Mtot_cell{1} = lowpass(Mtot, params.ff, 1/sample_time);
+ax_cell{1} = lowpass(ax, params.ff, 1/sample_time);
+q_cell{1} = lowpass(q, params.ff, 1/sample_time);
+time_grid_cell{1} = time_grid;
+pitch_angle_cell{1} = lowpass(pitch_angle, params.ff, 1/sample_time);
 
 clear output sim_obj
 
 %% Simulate identified model with Task1 input
 load('input_workspace.mat')
-clear ExcitationM
+clear ExcitationM noise
 
 load('Task1_results.mat')
 
-rng(1);
-ExcitationM = [validation_timevec, validation_signal];
-sim_object = SetModel(theta1, ExcitationM);
-output = sim(sim_object);
+noise_flag = 0;
+ExcitationM = [validation_timevec, amplitude.*validation_signal];
+sim_obj = SetModel(theta1, ExcitationM, noise_flag);
+output = sim(sim_obj);
 
 J_task1 = sum(est_unc1.^2);
 
 % Signals Pre-Processing
-[Mtot_cell{2}, ax_cell{2}, q_cell{2}, time_grid_cell{2}, pitch_angle_cell{2}] = OutputPreProcess(output, 1);
+[Mtot, ax, q, time_grid, pitch_angle] = OutputPreProcess(output, N_delay);
 
+Mtot_cell{2} = lowpass(Mtot, params.ff, 1/sample_time);
+ax_cell{2} = lowpass(ax, params.ff, 1/sample_time);
+q_cell{2} = lowpass(q, params.ff, 1/sample_time);
+time_grid_cell{2} = time_grid;
+pitch_angle_cell{2} = lowpass(pitch_angle, params.ff, 1/sample_time);
+
+disp('');
 disp('-------- Task 1 Input results --------')
 fprintf("\n Parameters and relative 3-sigma uncertainty (Gaussian distr. assumption)" + ...
     "\nXu = %3.3g\t 3sig%%: %3.3g" + ...
@@ -333,31 +372,26 @@ end
 
 %% Simulate identified model with optimized input
 load('input_workspace.mat')
-decimation = 1;
-clear ExcitationM
+clear ExcitationM noise
 
 % Hard-coded parameters vector
 theta = estimates;
 
-rng(1);
-ExcitationM = [validation_timevec, validation_signal];
-sim_object = SetModel(theta, ExcitationM);
+ExcitationM = [validation_timevec, amplitude.*validation_signal];
+sim_obj = SetModel(theta, ExcitationM, noise_flag);
 
-output = sim(sim_object);
+output = sim(sim_obj);
 
 % Signals Pre-Processing
 N_delay = 1;
 
-[Mtot_cell{3}, ax_cell{3}, q_cell{3}, time_grid_cell{3}, pitch_angle_cell{3}] = OutputPreProcess(output, 1);
+[Mtot, ax, q, time_grid, pitch_angle] = OutputPreProcess(output, N_delay);
 
-
-% Evaluate time-domain errors with respect to reference
-% Ideally: zero mean signal with random noise due to 
-% Either time "error" signal in logarithmic scale, use compare.
-for i = 2:3
-    output_error{i-1, 1} = q_cell{i} - q_cell{1};
-    output_error{i-1, 2} = ax_cell{i} - ax_cell{1};
-end
+Mtot_cell{3}        = lowpass(Mtot, params.ff, 1/sample_time);
+ax_cell{3}          = lowpass(ax, params.ff, 1/sample_time);
+q_cell{3}           = lowpass(q, params.ff, 1/sample_time);
+time_grid_cell{3}   = time_grid;
+pitch_angle_cell{3} = lowpass(pitch_angle, params.ff, 1/sample_time);
 
 %% Plots
 % Frequency Response with bode plots
@@ -387,19 +421,37 @@ set(axes_handles, 'YMinorTick', 'on', 'XMinorTick', 'on', 'LineWidth', 1.04, ...
 title('Poles/Zeros comparison with 3$\sigma$ confidence interval', 'Interpreter', 'Latex');
 
 %% Computation of Validation Indexes
-% evalFIT = @(qmeas, q) 100 * max([0, 1 - (norm(qmeas - q)).^2 ./ norm(qmeas - mean(qmeas))]);
-% evalPEC = @(qmeas, q) 1/sqrt(length(qmeas)) .* (norm(qmeas - q)).^2;
-% evalVAF = @(qmeas, q) 100 * max([0, 1 - var(qmeas - q)./var(qmeas)]);
-% 
-% ModelFIT = [evalFIT(pitch_angle_ref, pitch_angle); evalFIT(q_ref, q); evalFIT(ax_ref, ax)];
-% ModelPEC = [evalPEC(pitch_angle_ref, pitch_angle); evalPEC(q_ref, q); evalPEC(ax_ref, ax)];
-% ModelVAF = [evalVAF(pitch_angle_ref, pitch_angle); evalVAF(q_ref, q); evalVAF(ax_ref, ax)];
+% Index definition
+evalFIT = @(qmeas, q) 100 * max([0, 1 - (norm(qmeas - q)).^2 ./ (norm(qmeas - mean(qmeas))).^2]);
 
-% Display results:
-% fprintf("\n\nModelFIT: theta: %3.1g%%, q: %3.1g%%, ax: %3.1g%%\n  ", ModelFIT(1), ModelFIT(2), ModelFIT(3));
-% fprintf("ModelPEC: theta: %3.1g, q: %3.1g, ax: %3.1g\n  ", ModelPEC(1), ModelPEC(2), ModelPEC(3));
-% fprintf("ModelVAF: theta: %3.1g%%, q: %3.1g%%, ax: %3.1g%%\n  ", ModelVAF(1), ModelVAF(2), ModelVAF(3));
+evalPEC = @(qmeas, q) 1/sqrt(length(qmeas)) .* (norm(qmeas - q)).^2;
+evalVAF = @(qmeas, q) 100 * max([0, 1 - var(qmeas - q)./var(qmeas)]);
 
+ModelFIT = zeros(3, 2);
+ModelPEC = zeros(3, 2);
+ModelVAF = zeros(3, 2);
+
+names = {'Model identified in task 1', 'Model identified with optimized input'};
+
+% Evaluate indexes
+for i = 2:3
+    ModelFIT(:, i-1) = [evalFIT(pitch_angle_cell{1}, pitch_angle_cell{i});...
+        evalFIT(q_cell{1}, q_cell{i}); evalFIT(ax_cell{1}, ax_cell{i})];
+
+    ModelPEC(:, i-1) = [evalPEC(pitch_angle_cell{1}, pitch_angle_cell{i});...
+        evalPEC(q_cell{1}, q_cell{i}); evalPEC(ax_cell{1}, ax_cell{i})];
+
+    ModelVAF(:, i-1) = [evalVAF(pitch_angle_cell{1}, pitch_angle_cell{i});...
+        evalVAF(q_cell{1}, q_cell{i}); evalVAF(ax_cell{1}, ax_cell{i})];
+
+    % Display results:
+
+    fprintf('\n%s\n', names{i-1});
+    fprintf("ModelFIT: pitch angle: %3.2f%%,  q: %3.2f%%,  ax: %3.2f%%\n", ModelFIT(1, i-1), ModelFIT(2, i-1), ModelFIT(3));
+    fprintf("ModelPEC: pitch angle: %3.2f,  q: %3.2f,  ax: %3.2f\n", ModelPEC(1, i-1), ModelPEC(2, i-1), ModelPEC(3, i-1));
+    fprintf("ModelVAF: pitch angle: %3.2f%%,  q: %3.2f%%,  ax: %3.2f%%\n", ModelVAF(1, i-1), ModelVAF(2, i-1), ModelVAF(3, i-1));
+
+end
 
 
 end

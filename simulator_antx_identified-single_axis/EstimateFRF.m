@@ -1,12 +1,5 @@
-%% Compute Zero mean signals
-% [R_qd, R_dq] = CrossCorrEst(q_zm, delta_zm, Nsamples);
-% [R_ad, R_da] = CrossCorrEst(ax_zm, delta_zm, Nsamples);
-% [R_aq, R_qa] = CrossCorrEst(ax_zm, q_zm, Nsamples);
-
+% NOTE: This script requires zero mean signals to be defined
 %% Signal split and windowing (overlapped)
-% Reminder: trade-off to do with K number of intervals and M number of
-% samples per interval --> bias vs variance of the estimate depending on
-% the frequency bands of interest (control/determination?)
 
 % Divide signal into K parts of length M from zero mean signals
 % Windows Overlap coefficient
@@ -52,7 +45,6 @@ for k=2:K-1
 end
 
 % Create window functions and applied to each kth part
-
 % Windowing
 ax_window = cell(1,K);
 q_window = cell(1,K);
@@ -85,12 +77,11 @@ for k = 1:K
 
 end
 
-% Frequency
+% Frequency axis
 f_axis = ((0:(Nsamples-1)/2)*1/sample_time/Nsamples)';
 
 %% PSD rough estimate
-% Apply rough estimator to each kth segment --> Power * 2/T;
-
+% Apply rough estimator to each kth segment
 G_aa_rough = cell(1,K);
 G_qq_rough = cell(1,K);
 G_dd_rough = cell(1,K);
@@ -109,7 +100,7 @@ end
 
 %% PSD smooth estimate
 % Apply either smooth estimate (mean of each rough estimate) or smooth-iterative
-% procedure (see slide 27 of PracticeClass7)
+% procedure
 
 G_dd_mat = cell2mat(G_dd_rough);
 G_dd = mean(G_dd_mat,2);
@@ -130,9 +121,10 @@ G_dq = mean(G_dq_mat, 2);
 H1_hat = G_dq./G_dd;
 H2_hat = G_da./G_dd;
 
-% Test Coherence evaluation function
+% Coherence evaluation function
 gamma2_dq = EstimateCoherence(G_dq, G_dd, G_qq);
 gamma2_da = EstimateCoherence(G_da, G_dd, G_aa);
+
 % Plot of H1, H2 FRF estimators
 figure;
 semilogx(f_axis, gamma2_dq, '.-', 'LineWidth', 1.02);
@@ -161,7 +153,7 @@ hold off;
 gamma2_thr = 0.6;
 % Create Bool Mask
 MaskFreq = gamma2_dq >= gamma2_thr & gamma2_da >= gamma2_thr;
-% Extrac useful frequency points
+% Extract useful frequency points based on coherence
 faxis_masked = f_axis(MaskFreq);
 % Estimated FRF of the system
 H_hat = [H1_hat(MaskFreq), H2_hat(MaskFreq)];

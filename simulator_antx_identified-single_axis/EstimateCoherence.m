@@ -1,23 +1,22 @@
-function [gamma2, plot_obj] = EstimateCoherence(uy, uu, yy)
+function [gamma2] = EstimateCoherence(uy, uu, yy)
 %% PROTOTYPE
-% [gamma2, plot_obj] = EstimateCoherence(uy, uu, yy, f_axis)
+% [gamma2] = EstimateCoherence(uy, uu, yy)
 % -------------------------------------------------------------------------------------------------------------
 %% DESCRIPTION
 % Estimates the coherence function from input, output autospectra and
 % cross-spectrum and plots the result.
 % -------------------------------------------------------------------------------------------------------------
 %% INPUT
-% in1 [dim] description
+% uy: Input/Output cross-spectrum
+% uu: Input Autospectrum
+% yy: Output Autospectrum 
 % -------------------------------------------------------------------------------------------------------------
 %% OUTPUT
-% out1 [dim] description
+% gamma2: estimated coherence of uu and yy
 % -------------------------------------------------------------------------------------------------------------
 %% CHANGELOG
-% Date, User, brief summary of the modification
+% 07-03-2023    Pietro Califano     Function documented
 % -------------------------------------------------------------------------------------------------------------
-%% DEPENDENCIES
-% -------------------------------------------------------------------------------------------------------------
-%% Future upgrades
 
 
 %% Function code

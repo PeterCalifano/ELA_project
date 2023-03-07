@@ -1,21 +1,20 @@
 function fcn = Hmodelstruct(th)
 %% PROTOTYPE
+% fcn = Hmodelstruct(th)
 % -------------------------------------------------------------------------------------------------------------
 %% DESCRIPTION
-% What the function does
+% Function returning the transfer functions of the Longitudinal dynamics
+% given theta parameters vector
 % -------------------------------------------------------------------------------------------------------------
 %% INPUT
-% in1 [dim] description
+% th: [6x1] parameters vector
 % -------------------------------------------------------------------------------------------------------------
 %% OUTPUT
-% out1 [dim] description
+% fcn: [2x1] Transfer functions of the system
 % -------------------------------------------------------------------------------------------------------------
 %% CHANGELOG
-% Date, User, brief summary of the modification
+% 07-03-2023    Pietro Califano     Function documented
 % -------------------------------------------------------------------------------------------------------------
-%% DEPENDENCIES
-% -------------------------------------------------------------------------------------------------------------
-%% Future upgrades
 
 
 %% Function code
